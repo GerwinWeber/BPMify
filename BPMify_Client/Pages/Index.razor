@@ -37,7 +37,7 @@ else
 <div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
 <div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
 <div class="btn btn-primary" @onclick="()=> RequestToken()">Request Token</div>
-<div class="btn btn-primary" @onclick="DeserializeResponse">Deserialize</div>
+
 
 
 
@@ -59,7 +59,7 @@ else
     private bool _isAuthed = false;
     private bool _codeRecieved = false;
 
-    private string _authenticationState;
+    private string _authenticationState = SD.AuthState_Initialized;
     private HttpResponseMessage _response;
     private string _responseContent;
 
@@ -124,18 +124,36 @@ else
         Console.WriteLine(keyValues.ToString());
         _response = await client.SendAsync(request);
 
-
-
         Console.WriteLine("Start reading response string");
+        if (_response.IsSuccessStatusCode)
+        {
+            //var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_response.Content.ToString());
+            Console.WriteLine("Success");
+            _responseContent = await _response.Content.ReadAsStringAsync();
+            var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_responseContent);
+            Console.WriteLine(deserializedresponseContent.access_token);
+        }
+        else
+        {
+            Console.WriteLine("FAILED");
+        }
 
 
-        _responseContent = _response.Content.ReadAsStringAsync().Result;//has to be synchronouse because of deserialization in the next line
-        var deserializedresponseContent = JsonConvert.DeserializeObject<AccessTokenRespond>(_responseContent);
-        Console.WriteLine(deserializedresponseContent.access_token);
+
+
+        //_responseContent = _response.Content.ReadAsStringAsync().ContinueWith(Deserialize);
+        //var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_responseContent);
+        //Console.WriteLine(deserializedresponseContent.access_token);
+
+        //_responseContent = _response.Content.ReadAsStringAsync().Result;//has to be synchronouse because of deserialization in the next line
+
+        //var deserializedresponseContent = JsonConvert.DeserializeObject<AccessTokenRespond>(_responseContent);
+        //Console.WriteLine(deserializedresponseContent.access_token);
 
 
         Console.WriteLine("Reading response string ended");
     }
+
 
 
 
