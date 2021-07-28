@@ -28,6 +28,8 @@ namespace BPMify_Server
         {
             services.AddRazorPages();
             services.AddServerSideBlazor();
+            services.AddHttpClient(); //needed for using HttpClient
+            
             services.AddSingleton<WeatherForecastService>();
         }
 

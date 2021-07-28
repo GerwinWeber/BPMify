@@ -3,6 +3,7 @@
 @using System.Runtime
 
 @inject NavigationManager navManager
+@inject HttpClient http
 
 
 
@@ -18,16 +19,13 @@ else
     <a class="btn btn-primary" @onclick="NavigateToSpotifyLogin">
         Login
     </a>
-    @*<span>To get started: </span>
-        <a href="@_authUri.">
-            Login via Spotify
-        </a>*@
-
 }
 
 
 
 <div>@temp</div>
+<span class="mt-4"></span>
+<div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
 
 
 @code{
@@ -43,43 +41,76 @@ else
     private string _challenge = "";
 
     private bool _isAuthed = false;
+    private bool _codeRecieved = false;
 
-    private string _code = "code";
+    private string _code = "";
     private Uri _uri = new Uri("https://localhost:44359//callback");
-
+    private Uri _currentUri;
 
     private string temp = "";
 
-    //Beim Initialisieren des Blazor-Components wird direkt eine Uri erstellt, die den User zur Spotify-Anmeldung navigiert.
-    //Durch Klicken auf den Link "Login via Spotify" wird die Anmeldung angestoßen
-    protected override void OnInitialized()
+
+
+    protected override async Task OnInitializedAsync()
     {
-        (_verfier, _challenge) = PKCEUtil.GenerateCodes(120);
-        SpotifyAuthUrl = "https://accounts.spotify.com/en/authorize?client_id=" + _clientId + $"&response_type={_code}&redirect_uri={_redirectUri}&scope={_spotifyScopes}";
-
-
-
-
-        GenerateLoginURI();
-        //GetCallback(_code);
-        if (!string.IsNullOrEmpty(_clientId))
+        CheckForRecievedCode();
+        if (_codeRecieved)
         {
-            var baseUri = navManager.ToAbsoluteUri(navManager.BaseUri);
-            Console.WriteLine("BaseUri: " + baseUri.ToString());
+            await BuiltPostRequest();
+        }
+        else
+        {
 
-
-
-            var loginRequest = new LoginRequest(baseUri, _clientId, LoginRequest.ResponseType.Code)
-            {
-                Scope = new[] { Scopes.UserReadCurrentlyPlaying, Scopes.UserReadPlaybackState, Scopes.UserModifyPlaybackState, Scopes.Streaming, Scopes.UserReadEmail, Scopes.UserReadPrivate, Scopes.PlaylistReadPrivate }
-            };
-            _authUri = loginRequest.ToUri();
-            //temp = "AuthUri: " + _authUri;
         }
     }
 
 
+    private void CheckForRecievedCode()
+    {
+        _currentUri = new Uri(navManager.Uri);
+        Console.WriteLine(_currentUri.Query);
 
+        if (String.IsNullOrEmpty(_currentUri.Query) || !_currentUri.Query.Contains("?code="))
+        {
+            _codeRecieved = false;
+        }
+        else
+        {
+            _codeRecieved = true;
+        }
+    }
+
+    private async Task BuiltPostRequest()
+    {
+
+        _code = _currentUri.Query.Substring(6);//localhost:44359/?code=<code>
+        temp = $"_code: {_currentUri.Query}; _verifier: {_verfier} ";
+
+        //http://ronaldrosiernet.azurewebsites.net/Blog/2013/12/07/posting_urlencoded_key_values_with_httpclient
+        var client = new HttpClient();
+        client.BaseAddress = new Uri("https://accounts.spotify.com");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/token");
+
+        var keyValues = new List<KeyValuePair<string, string>>();
+        keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
+        keyValues.Add(new KeyValuePair<string, string>("grant_type", "authorization_code"));
+        keyValues.Add(new KeyValuePair<string, string>("code", _code));
+        keyValues.Add(new KeyValuePair<string, string>("redirect_uri", _redirectUri.ToString()));
+        //_verfier must be storaged locally
+        keyValues.Add(new KeyValuePair<string, string>("code_verifier", _verfier));
+
+        request.Content = new FormUrlEncodedContent(keyValues);
+        var response = await client.SendAsync(request);
+    }
+
+    public void NavigateToSpotifyLogin()
+    {
+        //_verfier and _challenge must be storaged locally
+        (_verfier, _challenge) = PKCEUtil.GenerateCodes(120);
+        SpotifyAuthUrl = "https://accounts.spotify.com/en/authorize?client_id=" + _clientId + $"&response_type=code&redirect_uri={_redirectUri}&scope={_spotifyScopes}&code_challenge={_challenge}&code_challenge_method=S256";
+        navManager.NavigateTo(SpotifyAuthUrl);
+        //navManager.NavigateTo(@"https://accounts.spotify.com/en/authorize?client_id=12b474707a0d41d08a6cd91bd49e56a6&response_type=code&redirect_uri=https:%2F%2Flocalhost:44359%2F&scope=user-read-currently-playing%20user-read-playback-state%20user-modify-playback-state%20streaming%20user-read-email%20user-read-private%20playlist-read-private");
+    }
 
     private void GenerateLoginURI()
     {
@@ -108,29 +139,25 @@ else
     }
 
     // This method should be called from your web-server when the user visits "https://localhost:44359/"
-    public async Task GetCallback(string code)
-    {
-        //_code = _uri.Query.Substring(6); //localhost:44304/?code=<code>
-        //temp = $"Verifier: {_verfier} ; Challenge: {_challenge} ; Uri: {_uri}; Code: {code}";
+    //public async Task GetCallback(string code)
+    //{
+    //    //_code = _uri.Query.Substring(6); //localhost:44304/?code=<code>
+    //    //temp = $"Verifier: {_verfier} ; Challenge: {_challenge} ; Uri: {_uri}; Code: {code}";
 
-        // Note that we use the verifier calculated above!
-        var initialResponse = await new OAuthClient().RequestToken(
-          new PKCETokenRequest(_clientId, code, _redirectUri, _verfier)
-        );
+    //    // Note that we use the verifier calculated above!
+    //    var initialResponse = await new OAuthClient().RequestToken(
+    //      new PKCETokenRequest(_clientId, code, _redirectUri, _verfier)
+    //    );
 
-        var spotify = new SpotifyClient(initialResponse.AccessToken);
-        temp = $"Verifier: {_verfier} ; Challenge: {_challenge} ; Access Token: {initialResponse.AccessToken}";
-        Console.WriteLine(initialResponse.AccessToken);
-        _isAuthed = true;
-        // Also important for later: response.RefreshToken
-    }
+    //    var spotify = new SpotifyClient(initialResponse.AccessToken);
+    //    temp = $"Verifier: {_verfier} ; Challenge: {_challenge} ; Access Token: {initialResponse.AccessToken}";
+    //    Console.WriteLine(initialResponse.AccessToken);
+    //    _isAuthed = true;
+    //    // Also important for later: response.RefreshToken
+    //}
 
 
-    public void NavigateToSpotifyLogin()
-    {
-        navManager.NavigateTo(SpotifyAuthUrl);
-        //navManager.NavigateTo(@"https://accounts.spotify.com/en/authorize?client_id=12b474707a0d41d08a6cd91bd49e56a6&response_type=code&redirect_uri=https:%2F%2Flocalhost:44359%2F&scope=user-read-currently-playing%20user-read-playback-state%20user-modify-playback-state%20streaming%20user-read-email%20user-read-private%20playlist-read-private");
-    }
+
 
 
     /*
