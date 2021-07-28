@@ -37,7 +37,8 @@ else
 <div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
 <div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
 <div class="btn btn-primary" @onclick="()=> RequestToken()">Request Token</div>
-<div class="btn btn-primary" @onclick="()=> DeserializeResponseMessage()">Deserialize ResponseMessage</div>
+<div class="btn btn-primary" @onclick="DeserializeResponse">Deserialize</div>
+
 
 
 
@@ -60,6 +61,7 @@ else
 
     private string _authenticationState;
     private HttpResponseMessage _response;
+    private string _responseContent;
 
     private string _code = "";
     private Uri _currentUri;
@@ -122,20 +124,20 @@ else
         Console.WriteLine(keyValues.ToString());
         _response = await client.SendAsync(request);
 
+
+
         Console.WriteLine("Start reading response string");
 
-        //Console.WriteLine(ReadResponse(response));
 
-        await ReadResponseMessage();
+        _responseContent = _response.Content.ReadAsStringAsync().Result;//has to be synchronouse because of deserialization in the next line
+        var deserializedresponseContent = JsonConvert.DeserializeObject<AccessTokenRespond>(_responseContent);
+        Console.WriteLine(deserializedresponseContent.access_token);
 
 
         Console.WriteLine("Reading response string ended");
     }
 
-    public async Task ReadResponseMessage()
-    {
-        Console.WriteLine(await _response.Content.ReadAsStringAsync());
-    }
+
 
     public async Task NavigateToSpotifyLogin()
     {
