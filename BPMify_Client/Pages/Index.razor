@@ -9,7 +9,7 @@
 @using Newtonsoft.Json
 @using Helpers
 
-
+@inject IJSRuntime js
 @inject NavigationManager navManager
 @inject HttpClient http
 @inject ILocalStorageService localStorage
@@ -37,6 +37,9 @@ else
 <div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
 <div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
 <div class="btn btn-primary" @onclick="()=> RequestToken()">Request Token</div>
+<div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsyncInvokeable(_bpmImfyDeviceId)">Take Control</div>
+<div class="btn btn-primary" @onclick="()=> ResumePlaying()">ResumePlaying</div>
+
 
 
 
@@ -62,11 +65,16 @@ else
     private string _authenticationState = SD.AuthState_Initialized;
     private HttpResponseMessage _response;
     private string _responseContent;
+    private AccessTokenRespond _accessTokenRespond;
 
     private string _code = "";
     private Uri _currentUri;
 
     private string temp = "";
+
+    //Fields for WebPlayer
+    private static SpotifyClient _spotify;//have to be static because of "GetPlaybackControlAsyncInvokeable()"
+    private static string _bpmImfyDeviceId;
 
 
 
@@ -125,37 +133,34 @@ else
         _response = await client.SendAsync(request);
 
         Console.WriteLine("Start reading response string");
-        if (_response.IsSuccessStatusCode)
+        if (_response.IsSuccessStatusCode)//AccessToken received
         {
             //var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_response.Content.ToString());
             Console.WriteLine("Success");
             _responseContent = await _response.Content.ReadAsStringAsync();
-            var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_responseContent);
-            Console.WriteLine(deserializedresponseContent.access_token);
+            _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_responseContent);
+            Console.WriteLine(_accessTokenRespond.access_token);
+            _authenticationState = SD.AuthState_ReceivedToken;
+            Console.WriteLine("Reading response string ended");
+            //await InitializePlayer(_accessTokenRespond.access_token);
+            _spotify = new SpotifyClient(_accessTokenRespond.access_token);
+            await js.InvokeVoidAsync("InitializePlayer", _accessTokenRespond.access_token);// WEB SDK Player initialisieren
         }
-        else
+        else//no AccessToken received
         {
             Console.WriteLine("FAILED");
         }
-
-
-
-
-        //_responseContent = _response.Content.ReadAsStringAsync().ContinueWith(Deserialize);
-        //var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_responseContent);
-        //Console.WriteLine(deserializedresponseContent.access_token);
-
-        //_responseContent = _response.Content.ReadAsStringAsync().Result;//has to be synchronouse because of deserialization in the next line
-
-        //var deserializedresponseContent = JsonConvert.DeserializeObject<AccessTokenRespond>(_responseContent);
-        //Console.WriteLine(deserializedresponseContent.access_token);
-
-
-        Console.WriteLine("Reading response string ended");
     }
 
-
-
+    [JSInvokable]
+    public async static Task GetPlaybackControlAsyncInvokeable(string deviceId)
+    {
+        _bpmImfyDeviceId = deviceId;
+        Console.WriteLine("DeviceID: " + deviceId);
+        PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { deviceId });
+        await _spotify.Player.TransferPlayback(request);
+        Console.WriteLine("Took control");
+    }
 
     public async Task NavigateToSpotifyLogin()
     {
@@ -172,11 +177,8 @@ else
         //https://www.scottbrady91.com/OpenID-Connect/ASPNET-Core-using-Proof-Key-for-Code-Exchange-PKCE
         //needed @using-Statements: @using System.Security.Cryptography @using System.Textusing @using Microsoft.IdentityModel.Tokensusing @using IdentityModel
 
-        // generate code_verifier
+        // generates code_verifier
         _codeVerifier = CryptoRandom.CreateUniqueId(32);
-
-        // store codeVerifier for later use
-        //context.Properties.Items.Add("code_verifier", codeVerifier);
 
         char[] padding = { '=' };
 
@@ -202,6 +204,54 @@ else
         _codeVerifier = listedLocalPkceData.ElementAt(0);
         _codeChallenge = listedLocalPkceData.ElementAt(1);
     }
+
+
+    private async Task InitializePlayer(string token)
+    {
+        await js.InvokeVoidAsync("InitializePlayer", token);
+    }
+
+    private async Task ResumePlaying()
+    {
+        await js.InvokeVoidAsync("Resume");
+    }
+
+    /*
+    async Task GetPlaybackControlAsync()
+    {
+        var player = new SpotifyClient(_accessTokenRespond.access_token);
+        player.Player
+        var deviceResponse = await _spotify.Player.GetAvailableDevices();//Gibt eine List mit allen Geräten zurück, die verfügbar sind
+        Console.WriteLine("Analyze response");
+
+        Device lamalightsDevice;
+
+        try
+        {
+            lamalightsDevice = deviceResponse.Devices.First(d => d.Name == "Lamalights");//Sucht das "Gerät" Lamalights. In dem Fall der in SpotifySDK.js initialisierten Player
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Exception: " + e.ToString());
+            throw;
+        }
+
+        Console.WriteLine("Name: " + lamalightsDevice.Name + " ID: " + lamalightsDevice.Id + " IsActive: " + lamalightsDevice.IsActive.ToString());
+        _lamalightsDeviceId = lamalightsDevice.Id;
+        PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { _lamalightsDeviceId });
+        await _spotify.Player.TransferPlayback(request);//Transfer anfragen
+                                                        //Error handling ErrorResponse error = _spotify.TransferPlayback("XXXX-XXXX-XXXX-XXXX");
+                                                        //await GetMetadataAsync();
+                                                        //await GetUsersPlaylistsAsync();
+                                                        //request.Play = true; //Nach dem Playback Transfer wird in Lamalights die Wiedergabe übernommen
+                                                        //await js.InvokeVoidAsync("Resume");
+        await ResumePlaying();
+    }
+
+
+    */
+
+
 
 
     private void GenerateLoginURI()
