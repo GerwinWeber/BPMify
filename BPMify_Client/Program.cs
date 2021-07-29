@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
 using SpotifyAPI.Web;
+using BPMify_Client.Services.IServices;
+using BPMify_Client.Services;
 
 namespace BPMify_Client
 {
@@ -21,7 +23,7 @@ namespace BPMify_Client
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddBlazoredLocalStorage();
-
+            builder.Services.AddScoped<IPlayerService, PlayerService>();
 
             await builder.Build().RunAsync();
         }

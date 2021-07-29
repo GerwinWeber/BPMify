@@ -26,7 +26,8 @@ function InitializePlayer(token) {
             console.log('SDK.js The Web Playback SDK is ready to play music with Device ID: ', device_id);
             //After player is ready, this C# method for taking playback control can be called.
 
-            DotNet.invokeMethodAsync('BPMify_Client', 'GetPlaybackControlAsyncInvokeable', device_id);
+            DotNet.invokeMethodAsync('BPMify_Client', 'GetPlaybackControlAsyncInvokeable', device_id); //The function GetPlaybackControlAsyncInvokeable needs to be a static funtion.Otherwise it is not found
+            //DotNet.invokeMethod('BPMify_Client', 'GetPlaybackControlAsyncInvokeable', device_id);
         }
     )
 

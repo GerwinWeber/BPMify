@@ -8,11 +8,16 @@
 @using IdentityModel
 @using Newtonsoft.Json
 @using Helpers
+@using BPMify_Client.Services.IServices
+
+
+@using Microsoft.Extensions.DependencyInjection
 
 @inject IJSRuntime js
 @inject NavigationManager navManager
 @inject HttpClient http
 @inject ILocalStorageService localStorage
+@inject IPlayerService player
 
 
 
@@ -37,7 +42,7 @@ else
 <div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
 <div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
 <div class="btn btn-primary" @onclick="()=> RequestToken()">Request Token</div>
-<div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsyncInvokeable(_bpmImfyDeviceId)">Take Control</div>
+<div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsync()">Take Control</div>
 <div class="btn btn-primary" @onclick="()=> ResumePlaying()">ResumePlaying</div>
 
 
@@ -65,7 +70,7 @@ else
     private string _authenticationState = SD.AuthState_Initialized;
     private HttpResponseMessage _response;
     private string _responseContent;
-    private AccessTokenRespond _accessTokenRespond;
+    private AccessTokenResponse _accessTokenRespond;
 
     private string _code = "";
     private Uri _currentUri;
@@ -75,11 +80,13 @@ else
     //Fields for WebPlayer
     private static SpotifyClient _spotify;//have to be static because of "GetPlaybackControlAsyncInvokeable()"
     private static string _bpmImfyDeviceId;
+    private static string _playerState = SD.PlayerState_Unitialized;
 
 
 
     protected override async Task OnInitializedAsync()
     {
+
         CheckForRecievedCode();
         if (_authenticationState == SD.AuthState_ReceivedCode)
         {
@@ -92,6 +99,21 @@ else
         }
     }
 
+    private async Task CheckForRefreshToken()
+    {
+        var refreshtoken = await localStorage.GetItemAsync<string>(SD.Local_RefreshToken);
+        if (!string.IsNullOrEmpty(refreshtoken))
+        {
+            //token found
+            Console.WriteLine("Refreshtoken: " + refreshtoken);
+        }
+        else
+        {
+            //no token found
+        }
+
+
+    }
 
     private void CheckForRecievedCode()
     {
@@ -138,12 +160,17 @@ else
             //var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_response.Content.ToString());
             Console.WriteLine("Success");
             _responseContent = await _response.Content.ReadAsStringAsync();
-            _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_responseContent);
+            _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent);
             Console.WriteLine(_accessTokenRespond.access_token);
             _authenticationState = SD.AuthState_ReceivedToken;
             Console.WriteLine("Reading response string ended");
             //await InitializePlayer(_accessTokenRespond.access_token);
-            _spotify = new SpotifyClient(_accessTokenRespond.access_token);
+            //_spotify = new SpotifyClient(_accessTokenRespond.access_token);
+            player.InitializePlayer(_accessTokenRespond.access_token);
+
+            //store refresh_token in local storage
+            await localStorage.SetItemAsStringAsync(SD.Local_RefreshToken, _accessTokenRespond.refresh_token);
+
             await js.InvokeVoidAsync("InitializePlayer", _accessTokenRespond.access_token);// WEB SDK Player initialisieren
         }
         else//no AccessToken received
@@ -152,20 +179,10 @@ else
         }
     }
 
-    [JSInvokable]
-    public async static Task GetPlaybackControlAsyncInvokeable(string deviceId)
-    {
-        _bpmImfyDeviceId = deviceId;
-        Console.WriteLine("DeviceID: " + deviceId);
-        PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { deviceId });
-        await _spotify.Player.TransferPlayback(request);
-        Console.WriteLine("Took control");
-    }
-
     public async Task NavigateToSpotifyLogin()
     {
         //_verfier and _challenge must be storaged locally
-        GenerateCodeAndChallenge();
+        await GenerateCodeAndChallenge();
         SpotifyAuthUrl = "https://accounts.spotify.com/en/authorize?client_id=" + _clientId + $"&response_type=code&redirect_uri={_redirectUri}&scope={_spotifyScopes}&code_challenge={_codeChallenge}&code_challenge_method=S256";
         navManager.NavigateTo(SpotifyAuthUrl);
 
@@ -189,7 +206,7 @@ else
         }
 
         List<string> CodeAndChallenge = new List<string>
-    {
+        {
             _codeVerifier,
             _codeChallenge
         };
@@ -205,6 +222,30 @@ else
         _codeChallenge = listedLocalPkceData.ElementAt(1);
     }
 
+    public async Task GetPlaybackControlAsync()
+    {
+        if (_playerState == SD.PlayerState_PlayerReady)
+        {
+            await player.TransferPlayback(_bpmImfyDeviceId);
+        }
+        else
+        {
+            Console.WriteLine("Player is not ready");
+        }
+    }
+
+
+    [JSInvokable]
+    public static void GetPlaybackControlAsyncInvokeable(string deviceId)
+    {
+        _bpmImfyDeviceId = deviceId;
+        _playerState = SD.PlayerState_PlayerReady;
+        Console.WriteLine("Player ready");
+        //Console.WriteLine("DeviceID: " + deviceId);
+        //PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { deviceId });
+        //await _spotify.Player.TransferPlayback(request);
+
+    }
 
     private async Task InitializePlayer(string token)
     {
