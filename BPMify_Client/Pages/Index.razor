@@ -1,7 +1,6 @@
 ﻿@page "/"
 @using SpotifyAPI.Web
 @using System.Runtime
-@using IdentityModel.Client
 @using System.Security.Cryptography
 @using System.Text
 @using Microsoft.IdentityModel.Tokens
@@ -9,9 +8,8 @@
 @using Newtonsoft.Json
 @using Helpers
 @using BPMify_Client.Services.IServices
+@using Model
 
-
-@using Microsoft.Extensions.DependencyInjection
 
 @inject IJSRuntime js
 @inject NavigationManager navManager
@@ -38,10 +36,10 @@ else
 
 
 <div>@temp</div>
-<span class="mt-4"></span>
+<span class="mb-4"></span>
 <div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
 <div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
-<div class="btn btn-primary" @onclick="()=> RequestToken()">Request Token</div>
+<div class="btn btn-primary" @onclick="()=> RequestAccessTokenWithCode()">Request Access Token</div>
 <div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsync()">Take Control</div>
 <div class="btn btn-primary" @onclick="()=> ResumePlaying()">ResumePlaying</div>
 
@@ -67,6 +65,7 @@ else
     private bool _isAuthed = false;
     private bool _codeRecieved = false;
 
+    private PkceData _pkceData;//= new PkceData() { Challenge = "", RefreshToken ="", Verifier = ""};
     private string _authenticationState = SD.AuthState_Initialized;
     private HttpResponseMessage _response;
     private string _responseContent;
@@ -86,36 +85,41 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-
-        CheckForRecievedCode();
-        if (_authenticationState == SD.AuthState_ReceivedCode)
-        {
-            await GetLocalStorageData();
-            await RequestToken();
-        }
-        else
-        {
-
-        }
+        await CheckAuthenticationState();
     }
 
-    private async Task CheckForRefreshToken()
+    private async Task CheckAuthenticationState()
     {
-        var refreshtoken = await localStorage.GetItemAsync<string>(SD.Local_RefreshToken);
-        if (!string.IsNullOrEmpty(refreshtoken))
+        //var refreshtoken = await localStorage.GetItemAsync<string>(SD.Local_RefreshToken);
+        try
         {
-            //token found
-            Console.WriteLine("Refreshtoken: " + refreshtoken);
+            _pkceData = await localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
+            Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+            if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
+            {
+                //RefreshToken found
+                _authenticationState = SD.AuthState_RefreshTokenStored;
+                Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+                await RequestAccessTokenWithRefreshToken();
+            }
+            else
+            {
+                //no RefreshToken found
+                await CheckForRecievedCode();
+            }
         }
-        else
+        catch (Exception e)
         {
-            //no token found
+            Console.WriteLine(e.Message);
+
         }
+        //await GenerateCodeAndChallenge();
+        //await CheckForRecievedCode();
 
 
     }
 
-    private void CheckForRecievedCode()
+    private async Task CheckForRecievedCode()
     {
         _currentUri = new Uri(navManager.Uri);
         Console.WriteLine(_currentUri.Query);
@@ -128,54 +132,87 @@ else
         {
             _authenticationState = SD.AuthState_ReceivedCode;
         }
+
+        await GetLocalStorageData();
+        await RequestAccessTokenWithCode();
     }
 
-    private async Task RequestToken()
+    private HttpRequestMessage BuildTokenRequest()
     {
-
-        _code = _currentUri.Query.Substring(6);//localhost:44359/?code=<code>
-        temp = $"_code: {_currentUri.Query}; _verifier: {_codeVerifier} ";
-
         //http://ronaldrosiernet.azurewebsites.net/Blog/2013/12/07/posting_urlencoded_key_values_with_httpclient
-        var client = new HttpClient();
-        client.BaseAddress = new Uri("https://accounts.spotify.com");
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/token");
+        http.BaseAddress = new Uri("https://accounts.spotify.com");
+        return new HttpRequestMessage(HttpMethod.Post, "/api/token");
+    }
 
+    private List<KeyValuePair<string, string>> BuildRequestContentWithAccessToken()
+    {
         var keyValues = new List<KeyValuePair<string, string>>();
         keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
         keyValues.Add(new KeyValuePair<string, string>("grant_type", "authorization_code"));
         keyValues.Add(new KeyValuePair<string, string>("code", _code));
         keyValues.Add(new KeyValuePair<string, string>("redirect_uri", _redirectUri.ToString()));
         //_verfier must be storaged locally
-        keyValues.Add(new KeyValuePair<string, string>("code_verifier", _codeVerifier));
+        keyValues.Add(new KeyValuePair<string, string>("code_verifier", _pkceData.Verifier));
+        return keyValues;
+    }
 
+    private List<KeyValuePair<string, string>> BuildRequestContentWithRefreshToken()
+    {
+        var keyValues = new List<KeyValuePair<string, string>>();
+        keyValues.Add(new KeyValuePair<string, string>("grant_type", "refresh_token"));
+        keyValues.Add(new KeyValuePair<string, string>("refresh_token", _pkceData.RefreshToken));
+        keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
+        return keyValues;
+    }
+
+    private async Task RequestAccessTokenWithRefreshToken()
+    {
+        var request = BuildTokenRequest();
+        var keyValues = BuildRequestContentWithRefreshToken();
         request.Content = new FormUrlEncodedContent(keyValues);
         Console.WriteLine("Send token request");
-        Console.WriteLine(keyValues.ToString());
-        _response = await client.SendAsync(request);
+        _response = await http.SendAsync(request);
+        await HandleTokenRequestResponse();
+    }
 
-        Console.WriteLine("Start reading response string");
+    private async Task RequestAccessTokenWithCode()
+    {
+
+        _code = _currentUri.Query.Substring(6);//localhost:44359/?code=<code>
+        temp = $"_code: {_currentUri.Query}; _verifier: {_codeVerifier} ";
+
+        var request = BuildTokenRequest();
+        var keyValues = BuildRequestContentWithAccessToken();
+        request.Content = new FormUrlEncodedContent(keyValues);
+        Console.WriteLine("Send token request with code");
+        _response = await http.SendAsync(request);
+        await HandleTokenRequestResponse();
+    }
+
+    private async Task HandleTokenRequestResponse()
+    {
         if (_response.IsSuccessStatusCode)//AccessToken received
         {
-            //var deserializedresponseContent = System.Text.Json.JsonSerializer.Deserialize<AccessTokenRespond>(_response.Content.ToString());
-            Console.WriteLine("Success");
             _responseContent = await _response.Content.ReadAsStringAsync();
             _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent);
-            Console.WriteLine(_accessTokenRespond.access_token);
-            _authenticationState = SD.AuthState_ReceivedToken;
+
+            Console.WriteLine("AccessToken: " + _accessTokenRespond.access_token);
+            Console.WriteLine("RefreshToken: " + _accessTokenRespond.refresh_token);
+            _authenticationState = SD.AuthState_ReceivedAccessToken;
             Console.WriteLine("Reading response string ended");
             //await InitializePlayer(_accessTokenRespond.access_token);
             //_spotify = new SpotifyClient(_accessTokenRespond.access_token);
             player.InitializePlayer(_accessTokenRespond.access_token);
 
             //store refresh_token in local storage
-            await localStorage.SetItemAsStringAsync(SD.Local_RefreshToken, _accessTokenRespond.refresh_token);
+            _pkceData.RefreshToken = _accessTokenRespond.refresh_token;
+            await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
 
             await js.InvokeVoidAsync("InitializePlayer", _accessTokenRespond.access_token);// WEB SDK Player initialisieren
         }
         else//no AccessToken received
         {
-            Console.WriteLine("FAILED");
+            Console.WriteLine("no AccessToken received");
         }
     }
 
@@ -204,22 +241,31 @@ else
             var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(_codeVerifier));
             _codeChallenge = Base64UrlEncoder.Encode(challengeBytes);
         }
+        _pkceData = new PkceData() { Challenge = _codeChallenge, Verifier = _codeVerifier, RefreshToken = "" };
+        //following three lines create an instanciating error
+        //_pkceData.Challenge = _codeChallenge;
+        //_pkceData.Verifier = _codeVerifier;
+        //_pkceData.RefreshToken = "";
 
-        List<string> CodeAndChallenge = new List<string>
-        {
-            _codeVerifier,
-            _codeChallenge
-        };
+        await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
 
-        await localStorage.SetItemAsync(SD.Local_PkceData, CodeAndChallenge);
+        //List<string> CodeAndChallenge = new List<string>
+        //{
+        //    _codeVerifier,
+        //    _codeChallenge
+        //};
+
+        //await localStorage.SetItemAsync(SD.Local_PkceData, CodeAndChallenge);
+
+
     }
 
     private async Task GetLocalStorageData()
     {
-        var rawLocalPkceData = await localStorage.GetItemAsync<string>(Helpers.SD.Local_PkceData);
-        List<string> listedLocalPkceData = JsonConvert.DeserializeObject<List<string>>(rawLocalPkceData);//https://www.newtonsoft.com/json/help/html/DeserializeCollection.htm
-        _codeVerifier = listedLocalPkceData.ElementAt(0);
-        _codeChallenge = listedLocalPkceData.ElementAt(1);
+        _pkceData = await localStorage.GetItemAsync<PkceData>(Helpers.SD.Local_PkceData);
+        //List<string> listedLocalPkceData = JsonConvert.DeserializeObject<List<string>>(rawLocalPkceData);//https://www.newtonsoft.com/json/help/html/DeserializeCollection.htm
+        //_codeVerifier = listedLocalPkceData.ElementAt(0);
+        //_codeChallenge = listedLocalPkceData.ElementAt(1);
     }
 
     public async Task GetPlaybackControlAsync()

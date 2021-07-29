@@ -12,7 +12,8 @@ namespace BPMify_Client.Helpers
 
         public const string AuthState_Initialized = "Initialized";
         public const string AuthState_ReceivedCode = "ReceivedCode";
-        public const string AuthState_ReceivedToken = "ReceivedToken";
+        public const string AuthState_ReceivedAccessToken = "ReceivedAccessToken";
+        public const string AuthState_RefreshTokenStored = "RefreshTokenStored";
 
         public const string PlayerState_Unitialized = "Unitialized";
         public const string PlayerState_PlayerReady = "PlayerReady";
