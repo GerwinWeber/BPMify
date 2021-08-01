@@ -11,6 +11,7 @@ using Blazored.LocalStorage;
 using SpotifyAPI.Web;
 using BPMify_Client.Services.IServices;
 using BPMify_Client.Services;
+using BPMify_Client.Helpers;
 
 namespace BPMify_Client
 {
@@ -24,7 +25,10 @@ namespace BPMify_Client
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddBlazoredLocalStorage();
             builder.Services.AddScoped<IPlayerService, PlayerService>();
-            
+            builder.Services.AddHttpClient<PlayerService>(SD.HttpClient_SpotifyApiClient, client =>
+            {
+                client.BaseAddress = new Uri("https://api.spotify.com");
+            });
 
             await builder.Build().RunAsync();
         }

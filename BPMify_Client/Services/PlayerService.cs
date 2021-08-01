@@ -8,6 +8,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
+using BPMify_Client.Helpers;
+
 
 namespace BPMify_Client.Services
 {
@@ -15,42 +17,29 @@ namespace BPMify_Client.Services
     {
         private string _token;
         private IJSRuntime _js;
-        private HttpClient _apiClient = new HttpClient();
         private HttpResponseMessage _response;
+        public IHttpClientFactory _clientFactory { get; set; }
 
-        //public static SpotifyClient SpotifyClient;//have to be static because of "GetPlaybackControlAsyncInvokeable()"
-        //public static string _bpmImfyDeviceId { get; set; }
-        //ApiClient is used for making requests to the Spotify API
-        //private IHttpClientFactory _clientFactory;
+        public PlayerService(IHttpClientFactory clientFactory)
+        {
+            _clientFactory = clientFactory;//Service is defined in Programm.cs in line -> builder.Services.AddHttpClient<PlayerService>("ApiClient",...
+        }
 
         public async Task InitializePlayer(string token, IJSRuntime js)
         {
-            //SpotifyClient = new SpotifyClient(token);
             _token = token;
-            //_clientFactory = clientFactory;
-            _apiClient.BaseAddress = new Uri("https://api.spotify.com");
             _js = js;
             await _js.InvokeVoidAsync("InitializePlayer", _token);// WEB SDK Player initialisieren
         }
 
         public async Task TransferPlayback(string deviceId)
         {
-            //OLD
-            //_bpmImfyDeviceId = deviceId;
-            //Console.WriteLine("DeviceID: " + deviceId);
-            //PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { deviceId });
-            //await SpotifyClient.Player.TransferPlayback(request);
-            //Console.WriteLine("Took control");
-
-            //New
             var request = new HttpRequestMessage(HttpMethod.Put, "/v1/me/player");
-            request.Content = new StringContent("{" + $"\"device_ids\": [\"" + deviceId + $"\"" + "]}");
-            //find a better solution to format into -> {device_ids: ["74ASZWbe4lXaubB36ztrGX"]}
-            //it need to be a list of string altough only one string is passed
-            _apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+            request.Content = new StringContent("{" + $"\"device_ids\": [\"" + deviceId + $"\"" + "]}");//find a better solution to format into -> {device_ids: ["74ASZWbe4lXaubB36ztrGX"]}
             Console.WriteLine("Send reqeust for transfer Playback ");
-            _response = await _apiClient.SendAsync(request);
-            _apiClient.Dispose();//not sure how to dispose correctly
+            var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+            _response = await httpClient.SendAsync(request);
         }
 
         public async Task Pause()
