@@ -1,11 +1,9 @@
 ﻿@page "/"
-@using SpotifyAPI.Web
 @using System.Runtime
 @using System.Security.Cryptography
 @using System.Text
 @using Microsoft.IdentityModel.Tokens
 @using IdentityModel
-@using Newtonsoft.Json
 @using Helpers
 @using BPMify_Client.Services.IServices
 @using Model
@@ -34,7 +32,6 @@ else
 }
 
 
-
 <div>@temp</div>
 <span class="mb-4"></span>
 <div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
@@ -43,11 +40,6 @@ else
 <div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsync()">Take Control</div>
 <div class="btn btn-primary" @onclick="()=> ResumePlaying()">Resume Playing</div>
 <div class="btn btn-primary" @onclick="()=> PausePlaying()">Pause Playing</div>
-
-
-
-
-
 
 
 @code{
@@ -174,7 +166,6 @@ else
 
     private async Task RequestAccessTokenWithCode()
     {
-
         _code = _currentUri.Query.Substring(6);//localhost:44359/?code=<code>
         temp = $"_code: {_currentUri.Query}; _verifier: {_codeVerifier} ";
 
@@ -197,15 +188,11 @@ else
             Console.WriteLine("RefreshToken: " + _accessTokenRespond.refresh_token);
             _authenticationState = SD.AuthState_ReceivedAccessToken;
             Console.WriteLine("Reading response string ended");
-            //await InitializePlayer(_accessTokenRespond.access_token);
-            //_spotify = new SpotifyClient(_accessTokenRespond.access_token);
             await player.InitializePlayer(_accessTokenRespond.access_token, js);
 
             //store refresh_token in local storage
             _pkceData.RefreshToken = _accessTokenRespond.refresh_token;
             await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
-
-            //await js.InvokeVoidAsync("InitializePlayer", _accessTokenRespond.access_token);// WEB SDK Player initialisieren
         }
         else//no AccessToken received
         {
@@ -251,9 +238,6 @@ else
     private async Task GetLocalStorageData()
     {
         _pkceData = await localStorage.GetItemAsync<PkceData>(Helpers.SD.Local_PkceData);
-        //List<string> listedLocalPkceData = JsonConvert.DeserializeObject<List<string>>(rawLocalPkceData);//https://www.newtonsoft.com/json/help/html/DeserializeCollection.htm
-        //_codeVerifier = listedLocalPkceData.ElementAt(0);
-        //_codeChallenge = listedLocalPkceData.ElementAt(1);
     }
 
     public async Task GetPlaybackControlAsync()
@@ -261,16 +245,6 @@ else
         if (_playerState == SD.PlayerState_PlayerReady)
         {
             await player.TransferPlayback(_bpmImfyDeviceId);
-
-            //http://ronaldrosiernet.azurewebsites.net/Blog/2013/12/07/posting_urlencoded_key_values_with_httpclient
-            //var apiClient = new HttpClient();
-            //apiClient.BaseAddress = new Uri("https://api.spotify.com");
-            //var request = new HttpRequestMessage(HttpMethod.Put, "/v1/me/player");
-            //var keyValues = new List<KeyValuePair<string, string>>();
-            //keyValues.Add(new KeyValuePair<string, string>("device_ids", _bpmImfyDeviceId));
-            //request.Content = new FormUrlEncodedContent(keyValues);
-            //Console.WriteLine("Send token request with code");
-            //_response = await http.SendAsync(request);
         }
         else
         {
@@ -278,123 +252,23 @@ else
         }
     }
 
-
-    [JSInvokable]
-    public static void GetPlaybackControlAsyncInvokeable(string deviceId)
-    {
-        _bpmImfyDeviceId = deviceId;
-        _playerState = SD.PlayerState_PlayerReady;
-        Console.WriteLine("Player ready");
-        //Console.WriteLine("DeviceID: " + deviceId);
-        //PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { deviceId });
-        //await _spotify.Player.TransferPlayback(request);
-
-    }
-
-    private async Task InitializePlayer(string token)
-    {
-        await js.InvokeVoidAsync("InitializePlayer", token);
-    }
-
     private async Task ResumePlaying()
     {
-        await js.InvokeVoidAsync("Resume");
+        await player.Resume();
+        //await js.InvokeVoidAsync("Resume");
     }
 
     private async Task PausePlaying()
     {
-        await js.InvokeVoidAsync("Pause");
+        await player.Pause();
+        //await js.InvokeVoidAsync("Pause");
     }
 
-    /*
-    async Task GetPlaybackControlAsync()
+    [JSInvokable]
+    public static void SetDeviceId(string deviceId)
     {
-        var player = new SpotifyClient(_accessTokenRespond.access_token);
-        player.Player
-        var deviceResponse = await _spotify.Player.GetAvailableDevices();//Gibt eine List mit allen Geräten zurück, die verfügbar sind
-        Console.WriteLine("Analyze response");
-
-        Device lamalightsDevice;
-
-        try
-        {
-            lamalightsDevice = deviceResponse.Devices.First(d => d.Name == "Lamalights");//Sucht das "Gerät" Lamalights. In dem Fall der in SpotifySDK.js initialisierten Player
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Exception: " + e.ToString());
-            throw;
-        }
-
-        Console.WriteLine("Name: " + lamalightsDevice.Name + " ID: " + lamalightsDevice.Id + " IsActive: " + lamalightsDevice.IsActive.ToString());
-        _lamalightsDeviceId = lamalightsDevice.Id;
-        PlayerTransferPlaybackRequest request = new PlayerTransferPlaybackRequest(new List<string>() { _lamalightsDeviceId });
-        await _spotify.Player.TransferPlayback(request);//Transfer anfragen
-                                                        //Error handling ErrorResponse error = _spotify.TransferPlayback("XXXX-XXXX-XXXX-XXXX");
-                                                        //await GetMetadataAsync();
-                                                        //await GetUsersPlaylistsAsync();
-                                                        //request.Play = true; //Nach dem Playback Transfer wird in Lamalights die Wiedergabe übernommen
-                                                        //await js.InvokeVoidAsync("Resume");
-        await ResumePlaying();
+        _bpmImfyDeviceId = deviceId;
+        _playerState = SD.PlayerState_PlayerReady;
+        Console.WriteLine("Player ready");
     }
-
-
-    */
-
-
-
-
-    private void GenerateLoginURI()
-    {
-
-
-        //// Make sure "https://localhost:44359/" is in your applications redirect URIs!
-        //var loginRequest = new LoginRequest(
-        //  _redirectUri,
-        //  "12b474707a0d41d08a6cd91bd49e56a6",
-        //  LoginRequest.ResponseType.Code
-        //)
-
-        //{
-        //    CodeChallengeMethod = "S256",
-        //    CodeChallenge = challenge,
-        //    Scope = new[] { Scopes.PlaylistReadPrivate, Scopes.PlaylistReadCollaborative }
-        //};
-
-        //_verfier = verifier;
-        //_challenge = challenge;
-        ////_code = LoginRequest.ResponseType.Code;
-        //var _authUri = loginRequest.ToUri();
-        ////temp = $"Verifier: {_verfier} ; Challenge: {_challenge}; Code: {LoginRequest.ResponseType.Code}; _authUri: {_authUri}";
-
-        // Redirect user to uri via your favorite web-server or open a local browser window
-    }
-
-    // This method should be called from your web-server when the user visits "https://localhost:44359/"
-    //public async Task GetCallback(string code)
-    //{
-    //    //_code = _uri.Query.Substring(6); //localhost:44304/?code=<code>
-    //    //temp = $"Verifier: {_verfier} ; Challenge: {_challenge} ; Uri: {_uri}; Code: {code}";
-
-    //    // Note that we use the verifier calculated above!
-    //    var initialResponse = await new OAuthClient().RequestToken(
-    //      new PKCETokenRequest(_clientId, code, _redirectUri, _verfier)
-    //    );
-
-    //    var spotify = new SpotifyClient(initialResponse.AccessToken);
-    //    temp = $"Verifier: {_verfier} ; Challenge: {_challenge} ; Access Token: {initialResponse.AccessToken}";
-    //    Console.WriteLine(initialResponse.AccessToken);
-    //    _isAuthed = true;
-    //    // Also important for later: response.RefreshToken
-    //}
-
-
-
-
-
-    /*
-    ZIEL:
-https://accounts.spotify.com/en/authorize?client_id=12b474707a0d41d08a6cd91bd49e56a6&response_type=code&redirect_uri=https:%2F%2Flocalhost:44359%2F&scope=user-read-currently-playing%20user-read-playback-state%20user-modify-playback-state%20streaming%20user-read-email%20user-read-private%20playlist-read-private
-    */
-
 }

@@ -11,5 +11,7 @@ namespace BPMify_Client.Services.IServices
     {
         public Task InitializePlayer(string token, IJSRuntime js);
         public Task TransferPlayback(string deviceId);
+        public Task Pause();
+        public Task Resume();
     }
 }

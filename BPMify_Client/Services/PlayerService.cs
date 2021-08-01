@@ -30,7 +30,7 @@ namespace BPMify_Client.Services
             //_clientFactory = clientFactory;
             _apiClient.BaseAddress = new Uri("https://api.spotify.com");
             _js = js;
-            await js.InvokeVoidAsync("InitializePlayer", _token);// WEB SDK Player initialisieren
+            await _js.InvokeVoidAsync("InitializePlayer", _token);// WEB SDK Player initialisieren
         }
 
         public async Task TransferPlayback(string deviceId)
@@ -53,9 +53,14 @@ namespace BPMify_Client.Services
             _apiClient.Dispose();//not sure how to dispose correctly
         }
 
-        public async Task PausePlayer()
+        public async Task Pause()
         {
             await _js.InvokeVoidAsync("Pause");
+        }
+
+        public async Task Resume()
+        {
+            await _js.InvokeVoidAsync("Resume");
         }
     }
 }
