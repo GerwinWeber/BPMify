@@ -131,10 +131,11 @@ else
         else
         {
             _authenticationState = SD.AuthState_ReceivedCode;
+            await GetLocalStorageData();
+            await RequestAccessTokenWithCode();
         }
 
-        await GetLocalStorageData();
-        await RequestAccessTokenWithCode();
+
     }
 
     private HttpRequestMessage BuildTokenRequest()

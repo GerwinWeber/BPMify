@@ -35,11 +35,7 @@ function InitializePlayer(token) {
     player.addListener('not_ready', ({ device_id }) => {
         console.log('SDK.js Device ID has gone offline', device_id);
     })
-    9
-
-    165
-    1
-
+ 
     // Connect to the player!
     player.connect().then(success => {
         if (success) {
