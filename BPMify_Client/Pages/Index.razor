@@ -41,7 +41,8 @@ else
 <div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
 <div class="btn btn-primary" @onclick="()=> RequestAccessTokenWithCode()">Request Access Token</div>
 <div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsync()">Take Control</div>
-<div class="btn btn-primary" @onclick="()=> ResumePlaying()">ResumePlaying</div>
+<div class="btn btn-primary" @onclick="()=> ResumePlaying()">Resume Playing</div>
+<div class="btn btn-primary" @onclick="()=> PausePlaying()">Pause Playing</div>
 
 
 
@@ -71,13 +72,15 @@ else
     private string _responseContent;
     private AccessTokenResponse _accessTokenRespond;
 
+
+
     private string _code = "";
     private Uri _currentUri;
 
     private string temp = "";
 
     //Fields for WebPlayer
-    private static SpotifyClient _spotify;//have to be static because of "GetPlaybackControlAsyncInvokeable()"
+    //private static SpotifyClient _spotify;//have to be static because of "GetPlaybackControlAsyncInvokeable()"
     private static string _bpmImfyDeviceId;
     private static string _playerState = SD.PlayerState_Unitialized;
 
@@ -111,12 +114,7 @@ else
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-
         }
-        //await GenerateCodeAndChallenge();
-        //await CheckForRecievedCode();
-
-
     }
 
     private async Task CheckForRecievedCode()
@@ -134,8 +132,6 @@ else
             await GetLocalStorageData();
             await RequestAccessTokenWithCode();
         }
-
-
     }
 
     private HttpRequestMessage BuildTokenRequest()
@@ -203,13 +199,13 @@ else
             Console.WriteLine("Reading response string ended");
             //await InitializePlayer(_accessTokenRespond.access_token);
             //_spotify = new SpotifyClient(_accessTokenRespond.access_token);
-            player.InitializePlayer(_accessTokenRespond.access_token);
+            await player.InitializePlayer(_accessTokenRespond.access_token, js);
 
             //store refresh_token in local storage
             _pkceData.RefreshToken = _accessTokenRespond.refresh_token;
             await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
 
-            await js.InvokeVoidAsync("InitializePlayer", _accessTokenRespond.access_token);// WEB SDK Player initialisieren
+            //await js.InvokeVoidAsync("InitializePlayer", _accessTokenRespond.access_token);// WEB SDK Player initialisieren
         }
         else//no AccessToken received
         {
@@ -250,15 +246,6 @@ else
 
         await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
 
-        //List<string> CodeAndChallenge = new List<string>
-        //{
-        //    _codeVerifier,
-        //    _codeChallenge
-        //};
-
-        //await localStorage.SetItemAsync(SD.Local_PkceData, CodeAndChallenge);
-
-
     }
 
     private async Task GetLocalStorageData()
@@ -274,6 +261,16 @@ else
         if (_playerState == SD.PlayerState_PlayerReady)
         {
             await player.TransferPlayback(_bpmImfyDeviceId);
+
+            //http://ronaldrosiernet.azurewebsites.net/Blog/2013/12/07/posting_urlencoded_key_values_with_httpclient
+            //var apiClient = new HttpClient();
+            //apiClient.BaseAddress = new Uri("https://api.spotify.com");
+            //var request = new HttpRequestMessage(HttpMethod.Put, "/v1/me/player");
+            //var keyValues = new List<KeyValuePair<string, string>>();
+            //keyValues.Add(new KeyValuePair<string, string>("device_ids", _bpmImfyDeviceId));
+            //request.Content = new FormUrlEncodedContent(keyValues);
+            //Console.WriteLine("Send token request with code");
+            //_response = await http.SendAsync(request);
         }
         else
         {
@@ -302,6 +299,11 @@ else
     private async Task ResumePlaying()
     {
         await js.InvokeVoidAsync("Resume");
+    }
+
+    private async Task PausePlaying()
+    {
+        await js.InvokeVoidAsync("Pause");
     }
 
     /*

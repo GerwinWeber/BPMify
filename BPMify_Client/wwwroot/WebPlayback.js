@@ -80,6 +80,13 @@ function Resume() {
     });
 }
 
+function Pause() {
+    //Pause Playing music
+    player.pause().then(() => {
+        console.log('Paused!');
+    });
+}
+
 function SkipToNextTrack() {
     player.nextTrack().then(() => {
         console.log('SDK.js Skipped to next track!');
