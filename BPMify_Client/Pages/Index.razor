@@ -252,13 +252,11 @@ else
     private async Task ResumePlaying()
     {
         await player.Resume();
-        //await js.InvokeVoidAsync("Resume");
     }
 
     private async Task PausePlaying()
     {
         await player.Pause();
-        //await js.InvokeVoidAsync("Pause");
     }
 
     [JSInvokable]

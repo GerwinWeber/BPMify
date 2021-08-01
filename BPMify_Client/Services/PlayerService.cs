@@ -40,6 +40,7 @@ namespace BPMify_Client.Services
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
             _response = await httpClient.SendAsync(request);
+            Console.WriteLine("Took control");
         }
 
         public async Task Pause()
