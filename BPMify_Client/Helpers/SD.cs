@@ -19,5 +19,6 @@ namespace BPMify_Client.Helpers
         public const string PlayerState_PlayerReady = "PlayerReady";
 
         public const string HttpClient_SpotifyApiClient = "ApiClient";
+        public const string HttpClient_SpotifyAuthenticationClient = "AuthenticationClient";
     }
 }

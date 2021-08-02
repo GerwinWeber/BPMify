@@ -14,6 +14,7 @@
 @inject HttpClient http
 @inject ILocalStorageService localStorage
 @inject IPlayerService player
+@inject ISpotifyAuthenticationService authService
 
 <h1>Hello, world!</h1>
 
@@ -23,7 +24,7 @@
 }
 else
 {
-    <a class="btn btn-primary" @onclick="NavigateToSpotifyLogin">
+    <a class="btn btn-primary" @onclick="authService.NavigateToSpotifyLogin">
         Login
     </a>
 }
@@ -31,9 +32,9 @@ else
 
 <div>@temp</div>
 <span class="mb-4"></span>
-<div class="btn btn-primary" @onclick="CheckForRecievedCode">Check for code</div>
-<div class="btn btn-primary" @onclick="()=> GetLocalStorageData()">Get local storage</div>
-<div class="btn btn-primary" @onclick="()=> RequestAccessTokenWithCode()">Request Access Token</div>
+<div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>
+<div class="btn btn-primary" @onclick="()=> authService.GetLocalStorageData()">Get local storage</div>
+<div class="btn btn-primary" @onclick="()=> authService.RequestAccessTokenWithCode()">Request Access Token</div>
 <div class="btn btn-primary" @onclick="()=> GetPlaybackControlAsync()">Take Control</div>
 <div class="btn btn-primary" @onclick="()=> ResumePlaying()">Resume Playing</div>
 <div class="btn btn-primary" @onclick="()=> PausePlaying()">Pause Playing</div>
@@ -77,165 +78,166 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await CheckAuthenticationState();
-    }
-
-    private async Task CheckAuthenticationState()
-    {
-        //var refreshtoken = await localStorage.GetItemAsync<string>(SD.Local_RefreshToken);
-        try
-        {
-            _pkceData = await localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
-            Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
-            if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
-            {
-                //RefreshToken found
-                _authenticationState = SD.AuthState_RefreshTokenStored;
-                Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
-                await RequestAccessTokenWithRefreshToken();
-            }
-            else
-            {
-                //no RefreshToken found
-                await CheckForRecievedCode();
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-    }
-
-    private async Task CheckForRecievedCode()
-    {
-        _currentUri = new Uri(navManager.Uri);
-        Console.WriteLine(_currentUri.Query);
-
-        if (String.IsNullOrEmpty(_currentUri.Query) || !_currentUri.Query.Contains("?code="))
-        {
-            _authenticationState = SD.AuthState_Initialized;
-        }
-        else
-        {
-            _authenticationState = SD.AuthState_ReceivedCode;
-            await GetLocalStorageData();
-            await RequestAccessTokenWithCode();
-        }
-    }
-
-    private HttpRequestMessage BuildTokenRequest()
-    {
-        //http://ronaldrosiernet.azurewebsites.net/Blog/2013/12/07/posting_urlencoded_key_values_with_httpclient
-        http.BaseAddress = new Uri("https://accounts.spotify.com");
-        return new HttpRequestMessage(HttpMethod.Post, "/api/token");
-    }
-
-    private List<KeyValuePair<string, string>> BuildRequestContentWithAccessToken()
-    {
-        var keyValues = new List<KeyValuePair<string, string>>();
-        keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
-        keyValues.Add(new KeyValuePair<string, string>("grant_type", "authorization_code"));
-        keyValues.Add(new KeyValuePair<string, string>("code", _code));
-        keyValues.Add(new KeyValuePair<string, string>("redirect_uri", _redirectUri.ToString()));
-        //_verfier must be storaged locally
-        keyValues.Add(new KeyValuePair<string, string>("code_verifier", _pkceData.Verifier));
-        return keyValues;
-    }
-
-    private List<KeyValuePair<string, string>> BuildRequestContentWithRefreshToken()
-    {
-        var keyValues = new List<KeyValuePair<string, string>>();
-        keyValues.Add(new KeyValuePair<string, string>("grant_type", "refresh_token"));
-        keyValues.Add(new KeyValuePair<string, string>("refresh_token", _pkceData.RefreshToken));
-        keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
-        return keyValues;
-    }
-
-    private async Task RequestAccessTokenWithRefreshToken()
-    {
-        var request = BuildTokenRequest();
-        var keyValues = BuildRequestContentWithRefreshToken();
-        request.Content = new FormUrlEncodedContent(keyValues);
-        Console.WriteLine("Send token request");
-        _response = await http.SendAsync(request);
-        await HandleTokenRequestResponse();
-    }
-
-    private async Task RequestAccessTokenWithCode()
-    {
-        _code = _currentUri.Query.Substring(6);//localhost:44359/?code=<code>
-        temp = $"_code: {_currentUri.Query}; _verifier: {_codeVerifier} ";
-
-        var request = BuildTokenRequest();
-        var keyValues = BuildRequestContentWithAccessToken();
-        request.Content = new FormUrlEncodedContent(keyValues);
-        Console.WriteLine("Send token request with code");
-        _response = await http.SendAsync(request);
-        await HandleTokenRequestResponse();
-    }
-
-    private async Task HandleTokenRequestResponse()
-    {
-        if (_response.IsSuccessStatusCode)//AccessToken received
-        {
-            _responseContent = await _response.Content.ReadAsStringAsync();
-            _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent);
-
-            Console.WriteLine("AccessToken: " + _accessTokenRespond.access_token);
-            Console.WriteLine("RefreshToken: " + _accessTokenRespond.refresh_token);
-            _authenticationState = SD.AuthState_ReceivedAccessToken;
-            Console.WriteLine("Reading response string ended");
-            await player.InitializePlayer(_accessTokenRespond.access_token, js);
-
-            //store refresh_token in local storage
-            _pkceData.RefreshToken = _accessTokenRespond.refresh_token;
-            await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
-        }
-        else//no AccessToken received
-        {
-            Console.WriteLine("no AccessToken received");
-        }
-    }
-
-    public async Task NavigateToSpotifyLogin()
-    {
-        //_verfier and _challenge must be storaged locally
-        await GenerateCodeAndChallenge();
-        SpotifyAuthUrl = "https://accounts.spotify.com/en/authorize?client_id=" + _clientId + $"&response_type=code&redirect_uri={_redirectUri}&scope={_spotifyScopes}&code_challenge={_codeChallenge}&code_challenge_method=S256";
-        navManager.NavigateTo(SpotifyAuthUrl);
+        await authService.CheckAuthenticationState();
+        //await CheckAuthenticationState();
 
     }
 
-    public async Task GenerateCodeAndChallenge()
-    {
-        //https://stackoverflow.com/questions/26353710/how-to-achieve-base64-url-safe-encoding-in-c
-        //https://www.scottbrady91.com/OpenID-Connect/ASPNET-Core-using-Proof-Key-for-Code-Exchange-PKCE
-        //needed @using-Statements: @using System.Security.Cryptography @using System.Textusing @using Microsoft.IdentityModel.Tokensusing @using IdentityModel
+    //private async Task CheckAuthenticationState()
+    //{
+    //    //var refreshtoken = await localStorage.GetItemAsync<string>(SD.Local_RefreshToken);
+    //    try
+    //    {
+    //        _pkceData = await localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
+    //        Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+    //        if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
+    //        {
+    //            //RefreshToken found
+    //            _authenticationState = SD.AuthState_RefreshTokenStored;
+    //            Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+    //            await RequestAccessTokenWithRefreshToken();
+    //        }
+    //        else
+    //        {
+    //            //no RefreshToken found
+    //            await CheckForRecievedCode();
+    //        }
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        Console.WriteLine(e.Message);
+    //    }
+    //}
 
-        // generates code_verifier
-        _codeVerifier = CryptoRandom.CreateUniqueId(32);
+    //private async Task CheckForRecievedCode()
+    //{
+    //    _currentUri = new Uri(navManager.Uri);
+    //    Console.WriteLine(_currentUri.Query);
 
-        char[] padding = { '=' };
+    //    if (String.IsNullOrEmpty(_currentUri.Query) || !_currentUri.Query.Contains("?code="))
+    //    {
+    //        _authenticationState = SD.AuthState_Initialized;
+    //    }
+    //    else
+    //    {
+    //        _authenticationState = SD.AuthState_ReceivedCode;
+    //        await GetLocalStorageData();
+    //        await RequestAccessTokenWithCode();
+    //    }
+    //}
 
-        using (var sha256 = SHA256.Create())
-        {
-            var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(_codeVerifier));
-            _codeChallenge = Base64UrlEncoder.Encode(challengeBytes);
-        }
-        _pkceData = new PkceData() { Challenge = _codeChallenge, Verifier = _codeVerifier, RefreshToken = "" };
-        //following three lines create an instanciating error
-        //_pkceData.Challenge = _codeChallenge;
-        //_pkceData.Verifier = _codeVerifier;
-        //_pkceData.RefreshToken = "";
+    //private HttpRequestMessage BuildTokenRequest()
+    //{
+    //    //http://ronaldrosiernet.azurewebsites.net/Blog/2013/12/07/posting_urlencoded_key_values_with_httpclient
+    //    http.BaseAddress = new Uri("https://accounts.spotify.com");
+    //    return new HttpRequestMessage(HttpMethod.Post, "/api/token");
+    //}
 
-        await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
+    //private List<KeyValuePair<string, string>> BuildRequestContentWithAccessToken()
+    //{
+    //    var keyValues = new List<KeyValuePair<string, string>>();
+    //    keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
+    //    keyValues.Add(new KeyValuePair<string, string>("grant_type", "authorization_code"));
+    //    keyValues.Add(new KeyValuePair<string, string>("code", _code));
+    //    keyValues.Add(new KeyValuePair<string, string>("redirect_uri", _redirectUri.ToString()));
+    //    keyValues.Add(new KeyValuePair<string, string>("code_verifier", _pkceData.Verifier));
+    //    return keyValues;
+    //}
 
-    }
+    //private List<KeyValuePair<string, string>> BuildRequestContentWithRefreshToken()
+    //{
+    //    var keyValues = new List<KeyValuePair<string, string>>();
+    //    keyValues.Add(new KeyValuePair<string, string>("grant_type", "refresh_token"));
+    //    keyValues.Add(new KeyValuePair<string, string>("refresh_token", _pkceData.RefreshToken));
+    //    keyValues.Add(new KeyValuePair<string, string>("client_id", _clientId));
+    //    return keyValues;
+    //}
 
-    private async Task GetLocalStorageData()
-    {
-        _pkceData = await localStorage.GetItemAsync<PkceData>(Helpers.SD.Local_PkceData);
-    }
+    //private async Task RequestAccessTokenWithRefreshToken()
+    //{
+    //    var request = BuildTokenRequest();
+    //    var keyValues = BuildRequestContentWithRefreshToken();
+    //    request.Content = new FormUrlEncodedContent(keyValues);
+    //    Console.WriteLine("Send token request");
+    //    _response = await http.SendAsync(request);
+    //    await HandleTokenRequestResponse();
+    //}
+
+    //private async Task RequestAccessTokenWithCode()
+    //{
+    //    _code = _currentUri.Query.Substring(6);//localhost:44359/?code=<code>
+    //    temp = $"_code: {_currentUri.Query}; _verifier: {_codeVerifier} ";
+
+    //    var request = BuildTokenRequest();
+    //    var keyValues = BuildRequestContentWithAccessToken();
+    //    request.Content = new FormUrlEncodedContent(keyValues);
+    //    Console.WriteLine("Send token request with code");
+    //    _response = await http.SendAsync(request);
+    //    await HandleTokenRequestResponse();
+    //}
+
+    //private async Task HandleTokenRequestResponse()
+    //{
+    //    if (_response.IsSuccessStatusCode)//AccessToken received
+    //    {
+    //        _responseContent = await _response.Content.ReadAsStringAsync();
+    //        _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent);
+
+    //        Console.WriteLine("AccessToken: " + _accessTokenRespond.access_token);
+    //        Console.WriteLine("RefreshToken: " + _accessTokenRespond.refresh_token);
+    //        _authenticationState = SD.AuthState_ReceivedAccessToken;
+    //        Console.WriteLine("Reading response string ended");
+    //        await player.InitializePlayer(_accessTokenRespond.access_token, js);
+
+    //        //store refresh_token in local storage
+    //        _pkceData.RefreshToken = _accessTokenRespond.refresh_token;
+    //        await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
+    //    }
+    //    else//no AccessToken received
+    //    {
+    //        Console.WriteLine("no AccessToken received");
+    //    }
+    //}
+
+    //public async Task NavigateToSpotifyLogin()
+    //{
+    //    //_verfier and _challenge must be storaged locally
+    //    await GenerateCodeAndChallenge();
+    //    SpotifyAuthUrl = "https://accounts.spotify.com/en/authorize?client_id=" + _clientId + $"&response_type=code&redirect_uri={_redirectUri}&scope={_spotifyScopes}&code_challenge={_codeChallenge}&code_challenge_method=S256";
+    //    navManager.NavigateTo(SpotifyAuthUrl);
+
+    //}
+
+    //public async Task GenerateCodeAndChallenge()
+    //{
+    //    //https://stackoverflow.com/questions/26353710/how-to-achieve-base64-url-safe-encoding-in-c
+    //    //https://www.scottbrady91.com/OpenID-Connect/ASPNET-Core-using-Proof-Key-for-Code-Exchange-PKCE
+    //    //needed @using-Statements: @using System.Security.Cryptography @using System.Textusing @using Microsoft.IdentityModel.Tokensusing @using IdentityModel
+
+    //    // generates code_verifier
+    //    _codeVerifier = CryptoRandom.CreateUniqueId(32);
+
+    //    char[] padding = { '=' };
+
+    //    using (var sha256 = SHA256.Create())
+    //    {
+    //        var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(_codeVerifier));
+    //        _codeChallenge = Base64UrlEncoder.Encode(challengeBytes);
+    //    }
+    //    _pkceData = new PkceData() { Challenge = _codeChallenge, Verifier = _codeVerifier, RefreshToken = "" };
+    //    //following three lines create an instanciating error
+    //    //_pkceData.Challenge = _codeChallenge;
+    //    //_pkceData.Verifier = _codeVerifier;
+    //    //_pkceData.RefreshToken = "";
+
+    //    await localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
+
+    //}
+
+    //private async Task GetLocalStorageData()
+    //{
+    //    _pkceData = await localStorage.GetItemAsync<PkceData>(Helpers.SD.Local_PkceData);
+    //}
 
     public async Task GetPlaybackControlAsync()
     {
