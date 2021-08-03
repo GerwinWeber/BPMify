@@ -52,7 +52,6 @@ namespace BPMify_Client.Services
 
         public async Task CheckAuthenticationState()
         {
-            //var refreshtoken = await localStorage.GetItemAsync<string>(SD.Local_RefreshToken);
             try
             {
                 _pkceData = await _localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
@@ -156,7 +155,7 @@ namespace BPMify_Client.Services
                 Console.WriteLine("RefreshToken: " + _accessTokenRespond.refresh_token);
                 _authenticationState = SD.AuthState_ReceivedAccessToken;
                 Console.WriteLine("Reading response string ended");
-                await _player.InitializePlayer(_accessTokenRespond.access_token, _js);
+                await _player.InitializePlayer(_accessTokenRespond.access_token);
 
                 //store refresh_token in local storage
                 _pkceData.RefreshToken = _accessTokenRespond.refresh_token;

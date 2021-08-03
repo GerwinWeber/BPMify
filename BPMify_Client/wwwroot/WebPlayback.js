@@ -1,4 +1,9 @@
 ﻿var player;//declare as global variable
+var componentRef
+
+function SetComponentRed(objRef) {
+    componentRef = objRef;
+}
 
 function RefreshToken(token) {
 
@@ -27,6 +32,9 @@ function InitializePlayer(token) {
             //After player is ready, this C# method for taking playback control can be called.
 
             DotNet.invokeMethodAsync('BPMify_Client', 'SetDeviceId', device_id); //The function GetPlaybackControlAsyncInvokeable needs to be a static funtion.Otherwise it is not found
+            
+            componentRef.invokeMethodAsync('Rerender');
+
             //DotNet.invokeMethod('BPMify_Client', 'GetPlaybackControlAsyncInvokeable', device_id);
         }
     )
