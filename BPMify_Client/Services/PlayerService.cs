@@ -18,8 +18,6 @@ namespace BPMify_Client.Services
         private string _token;
         private IJSRuntime _js;
         private HttpResponseMessage _response;
-        private static string _bpmImfyDeviceId;
-        public static string _playerState { get; set; } = SD.PlayerState_Unitialized;
         public IHttpClientFactory _clientFactory { get; set; }
 
 
@@ -35,14 +33,15 @@ namespace BPMify_Client.Services
         {
             _token = token;
             await _js.InvokeVoidAsync("InitializePlayer", _token);// WEB SDK Player initialisieren
+            //_playerstate = SD.PlayerState_InitializePlayer;
         }
 
 
 
-        public async Task TransferPlayback()
+        public async Task TransferPlayback(string deviceId)
         {
             var request = new HttpRequestMessage(HttpMethod.Put, "/v1/me/player");
-            request.Content = new StringContent("{" + $"\"device_ids\": [\"" + _bpmImfyDeviceId + $"\"" + "]}");//find a better solution to format into -> {device_ids: ["74ASZWbe4lXaubB36ztrGX"]}
+            request.Content = new StringContent("{" + $"\"device_ids\": [\"" + deviceId + $"\"" + "]}");//find a better solution to format into -> {device_ids: ["74ASZWbe4lXaubB36ztrGX"]}
             Console.WriteLine("Send reqeust for transfer Playback ");
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);

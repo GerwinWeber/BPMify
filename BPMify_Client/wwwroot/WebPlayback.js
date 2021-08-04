@@ -1,8 +1,8 @@
 ﻿var player;//declare as global variable
-var componentRef
+var componentRef; //needs to be stored to call a non-static DotNet-Method
 
 function SetComponentRed(objRef) {
-    componentRef = objRef;
+    componentRef = objRef; //passes the BlazorComponent as object reference
 }
 
 function RefreshToken(token) {
@@ -31,9 +31,9 @@ function InitializePlayer(token) {
             console.log('SDK.js The Web Playback SDK is ready to play music with Device ID: ', device_id);
             //After player is ready, this C# method for taking playback control can be called.
 
-            DotNet.invokeMethodAsync('BPMify_Client', 'SetDeviceId', device_id); //The function GetPlaybackControlAsyncInvokeable needs to be a static funtion.Otherwise it is not found
+            //DotNet.invokeMethodAsync('BPMify_Client', 'SetDeviceId'); //The function GetPlaybackControlAsyncInvokeable needs to be a static funtion.Otherwise it is not found
             
-            componentRef.invokeMethodAsync('Rerender');
+            componentRef.invokeMethodAsync('TransferPlayback', device_id);
 
             //DotNet.invokeMethod('BPMify_Client', 'GetPlaybackControlAsyncInvokeable', device_id);
         }

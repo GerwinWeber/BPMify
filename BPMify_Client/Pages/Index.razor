@@ -15,75 +15,55 @@
 
 <h1>Hello, world!</h1>
 
-@if (_playerState == SD.PlayerState_PlayerReady)
-{
-    <div class="btn btn-primary" @onclick="()=> player.TransferPlayback()">Take Control</div>
-    <div class="btn btn-primary" @onclick="()=> player.Resume()">Resume Playing</div>
-    <div class="btn btn-primary" @onclick="()=> player.Pause()">Pause Playing</div>
-}
-else
+@if (_authState == SD.PlayerState_PlayerNotInitialized)
 {
     <a class="btn btn-primary" @onclick="authService.NavigateToSpotifyLogin">
         Login
     </a>
 }
+else if (_authState == SD.PlayerState_PlayerReady)
+{
+    <div class="btn btn-primary" @onclick="() => player.Resume()">Resume Playing</div>
+    <div class="btn btn-primary" @onclick="() => player.Pause()">Pause Playing</div>
+}
+else
+{
+
+    <div>Loading... </div>
+}
 
 
-<span class="mb-4"></span>
-<div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>
-<div class="btn btn-primary" @onclick="()=> authService.GetLocalStorageData()">Get local storage</div>
-<div class="btn btn-primary" @onclick="()=> authService.RequestAccessTokenWithCode()">Request Access Token</div>
+@*<span class="mb-4"></span>
+    <div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>
+    <div class="btn btn-primary" @onclick="()=> authService.GetLocalStorageData()">Get local storage</div>
+    <div class="btn btn-primary" @onclick="()=> authService.RequestAccessTokenWithCode()">Request Access Token</div>*@
 
 
 
 @code{
-    private bool _isAuthed = false;
-
-    //Fields for WebPlayer
-    //private static SpotifyClient _spotify;//have to be static because of "GetPlaybackControlAsyncInvokeable()"
-    private static string _bpmImfyDeviceId;
-    public static string _playerState = SD.PlayerState_Unitialized;
+    public string _authState = "";
     private static DotNetObjectReference<Index> _objRef;
-
-
-
-    //static void PlayerStateHasChanged(object sender, EventArgs e)
-    //{
-    //    Console.WriteLine("PlayerStateHasChanged()");
-    //    Console.WriteLine(e.ToString());
-    //}
-
-
 
     protected override async Task OnInitializedAsync()
     {
-        //player.PlayerStateHasChanged += PlayerStateHasChanged;//adds Eventlistener
+        _authState = SD.PlayerState_TryToAuthenticate;
         _objRef = DotNetObjectReference.Create(this);
         var result = await js.InvokeAsync<string>("SetComponentRed", _objRef);
 
         await authService.CheckAuthenticationState();
-        //_playerState = player.GetPlayerState();
-        Console.WriteLine(_playerState + "wf");
-
+        _authState = authService.GetAuthState();
+        //_authState = player.GetPlayerstate();
+        Console.WriteLine(_authState);
     }
 
     [JSInvokable]
-    public static void SetDeviceId(string deviceId)
+    public async Task TransferPlayback(string deviceId)
     {
-        _bpmImfyDeviceId = deviceId;
-        _playerState = SD.PlayerState_PlayerReady;
-        Console.WriteLine("Player ready");
-        //var result = await js.InvokeVoidAsync("RerenderComponent", _objRef);
-    }
-
-    [JSInvokable]
-    public void Rerender()
-    {
-        _playerState = SD.PlayerState_PlayerReady;
+        _authState = SD.PlayerState_PlayerReady;
         StateHasChanged();
         Console.WriteLine("Rerendered");
-        player.TransferPlayback();
-        player.Resume();
+        await player.TransferPlayback(deviceId);
+        //await player.Resume();
     }
 
 }

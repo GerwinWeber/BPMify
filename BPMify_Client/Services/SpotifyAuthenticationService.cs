@@ -36,6 +36,7 @@ namespace BPMify_Client.Services
         private string SpotifyAuthUrl = "";
         private Uri _redirectUri = new Uri("https://localhost:44352/");
 
+
         private IPlayerService _player;
         public ILocalStorageService _localStorage;
         public IJSRuntime _js;
@@ -50,6 +51,16 @@ namespace BPMify_Client.Services
             _clientFactory = clientFactory;
         }
 
+        public void SetAuthState(string state)
+        {
+            _authenticationState = state;
+        }
+
+        public string GetAuthState()
+        {
+            return _authenticationState;
+        }
+
         public async Task CheckAuthenticationState()
         {
             try
@@ -58,37 +69,49 @@ namespace BPMify_Client.Services
                 Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
                 if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
                 {
-                    //RefreshToken found
+                    //RefreshToken found in local storage
                     _authenticationState = SD.AuthState_RefreshTokenStored;
                     Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
                     await RequestAccessTokenWithRefreshToken();
-                }
-                else
-                {
-                    //no RefreshToken found
-                    await CheckForRecievedCode();
+                    return;
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                //Console.WriteLine(e.Message);
+                Console.WriteLine("no RefreshToken found in local storage");
             }
+            await CheckForRecievedCode();
         }
 
         public async Task CheckForRecievedCode()
         {
             _currentUri = new Uri(_navManager.Uri);
-            Console.WriteLine(_currentUri.Query);
+            //Console.WriteLine(_currentUri.Query);
 
             if (String.IsNullOrEmpty(_currentUri.Query) || !_currentUri.Query.Contains("?code="))
             {
-                _authenticationState = SD.AuthState_Initialized;
+                //no code for requesting Accesstoken available
+                _authenticationState = SD.PlayerState_PlayerNotInitialized;
+                Console.WriteLine("no code for requesting Accesstoken available");
             }
             else
             {
                 _authenticationState = SD.AuthState_ReceivedCode;
-                await GetLocalStorageData();
-                await RequestAccessTokenWithCode();
+                Console.WriteLine(_authenticationState);
+                try
+                {
+                    await GetLocalStorageData();
+                    await RequestAccessTokenWithCode();
+                }
+                catch (Exception e)
+                {
+                    //code not valid
+                    Console.WriteLine("code not valid");
+                    _authenticationState = SD.PlayerState_PlayerNotInitialized;
+                }
+                
+
             }
         }
 
