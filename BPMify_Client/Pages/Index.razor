@@ -21,7 +21,7 @@
         Login
     </a>
 }
-else if (_authState == SD.PlayerState_PlayerReady)
+else if (_authState == SD.PlayerState_PlayerReady || player.PlayStatus())
 {
     <div class="btn btn-primary" @onclick="() => player.Resume()">Resume Playing</div>
     <div class="btn btn-primary" @onclick="() => player.Pause()">Pause Playing</div>
@@ -46,14 +46,18 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _authState = SD.PlayerState_TryToAuthenticate;
-        _objRef = DotNetObjectReference.Create(this);
-        var result = await js.InvokeAsync<string>("SetComponentRed", _objRef);
+        if (!player.PlayStatus())
+        {
+            //if player is not playing
+            _authState = SD.PlayerState_TryToAuthenticate;
+            _objRef = DotNetObjectReference.Create(this);
+            var result = await js.InvokeAsync<string>("SetIndexComponentRef", _objRef);
 
-        await authService.CheckAuthenticationState();
-        _authState = authService.GetAuthState();
-        //_authState = player.GetPlayerstate();
-        Console.WriteLine(_authState);
+            await authService.CheckAuthenticationState();
+            _authState = authService.GetAuthState();
+            Console.WriteLine(_authState);
+        }
+
     }
 
     [JSInvokable]

@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31424.327
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Business", "Business\Business.csproj", "{2F7CB0E5-7CCF-4C98-A26C-C0139CC24752}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Business", "Business\Business.csproj", "{2F7CB0E5-7CCF-4C98-A26C-C0139CC24752}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BPMify_Client", "BPMify_Client\BPMify_Client.csproj", "{3AE77BCC-7EC4-4050-892A-C12916E069B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BPMify_Client", "BPMify_Client\BPMify_Client.csproj", "{3AE77BCC-7EC4-4050-892A-C12916E069B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpotifyAPI", "SpotifyAPI\SpotifyAPI.csproj", "{55968731-CB4D-4C49-B370-F7602FD54FB0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpotifyAPI", "SpotifyAPI\SpotifyAPI.csproj", "{55968731-CB4D-4C49-B370-F7602FD54FB0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BPMify_Server", "BPMify_Server\BPMify_Server.csproj", "{17363584-B7F2-4984-B3C7-090028F4E97A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BPMify_Server", "BPMify_Server\BPMify_Server.csproj", "{17363584-B7F2-4984-B3C7-090028F4E97A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

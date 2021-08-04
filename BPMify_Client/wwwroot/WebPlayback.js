@@ -1,8 +1,13 @@
 ﻿var player;//declare as global variable
-var componentRef; //needs to be stored to call a non-static DotNet-Method
+var indexComponentRef; //needs to be stored to call a non-static DotNet-Method
+var playlistsComponentRef;
 
-function SetComponentRed(objRef) {
-    componentRef = objRef; //passes the BlazorComponent as object reference
+function SetIndexComponentRef(objRef) {
+    indexComponentRef = objRef; //passes the BlazorComponent as object reference
+}
+
+function SetPlaylistsComponentRef(objRef) {
+    playlistsComponentRef = objRef; //passes the BlazorComponent as object reference
 }
 
 function RefreshToken(token) {
@@ -33,7 +38,7 @@ function InitializePlayer(token) {
 
             //DotNet.invokeMethodAsync('BPMify_Client', 'SetDeviceId'); //The function GetPlaybackControlAsyncInvokeable needs to be a static funtion.Otherwise it is not found
             
-            componentRef.invokeMethodAsync('TransferPlayback', device_id);
+            indexComponentRef.invokeMethodAsync('TransferPlayback', device_id);
 
             //DotNet.invokeMethod('BPMify_Client', 'GetPlaybackControlAsyncInvokeable', device_id);
         }

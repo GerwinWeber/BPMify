@@ -10,6 +10,7 @@ using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using BPMify_Client.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using BPMify_Client.Model.CurrentUserPlaylistsResponse;
 
 namespace BPMify_Client.Services
 {
@@ -18,6 +19,8 @@ namespace BPMify_Client.Services
         private string _token;
         private IJSRuntime _js;
         private HttpResponseMessage _response;
+        public bool IsPlaying = false;
+        private List<Item> _allUserPlaylists = new List<Item>();
         public IHttpClientFactory _clientFactory { get; set; }
 
 
@@ -45,20 +48,51 @@ namespace BPMify_Client.Services
             Console.WriteLine("Send reqeust for transfer Playback ");
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-            _response = await httpClient.SendAsync(request);
+            var response = await httpClient.SendAsync(request);
             Console.WriteLine("Took control");            
         }
 
         public async Task Pause()
         {
             await _js.InvokeVoidAsync("Pause");
+            IsPlaying = false;
         }
 
         public async Task Resume()
         {
             await _js.InvokeVoidAsync("Resume");
+            IsPlaying = true;
         }
 
-        
+        public bool PlayStatus()
+        {
+            return IsPlaying;
+        }
+
+        public async Task<List<Item>> GetCurrentUsersPlaylists()
+        {
+            Console.WriteLine("Send reqeust for get Playlists of the current user");
+            int counter = 0;
+            int amountOfItems = 50;
+            while(amountOfItems == 50)
+            {
+                var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+                var baseUri = new Uri("https://api.spotify.com/v1/me/playlists");
+                var uri = new Uri(baseUri, $"?limit=50&offset={counter}");
+                var response = await httpClient.GetFromJsonAsync<CurrentUserPlaylistsResponse>(uri);
+                foreach (var item in response.items)
+                {
+                    Console.WriteLine($"Name: {item.name} Id: {item.id}");
+                    _allUserPlaylists.Add(item);
+                    counter += 1;
+                }
+                amountOfItems = response.items.Count<Item>();
+                
+            }
+            Console.WriteLine("Got all playlists");
+            return _allUserPlaylists;
+        }
+
     }
 }

@@ -9,11 +9,15 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace BPMify_Client.Services
 {
@@ -41,6 +45,8 @@ namespace BPMify_Client.Services
         public ILocalStorageService _localStorage;
         public IJSRuntime _js;
         public IHttpClientFactory _clientFactory { get; set; }
+        private JsonSerializerOptions _jsonSerializerOptions;
+        
 
         public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager, IHttpClientFactory clientFactory)
         {
@@ -49,6 +55,7 @@ namespace BPMify_Client.Services
             _js = js;
             _navManager = navManager;
             _clientFactory = clientFactory;
+            _jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
         }
 
         public void SetAuthState(string state)
@@ -110,8 +117,6 @@ namespace BPMify_Client.Services
                     Console.WriteLine("code not valid");
                     _authenticationState = SD.PlayerState_PlayerNotInitialized;
                 }
-                
-
             }
         }
 
@@ -149,7 +154,7 @@ namespace BPMify_Client.Services
             request.Content = new FormUrlEncodedContent(keyValues);
             Console.WriteLine("Send token request");
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyAuthenticationClient);
-            _response = await httpClient.SendAsync(request);
+            _response = await httpClient.PostAsync("https://accounts.spotify.com/api/token", request.Content);
             await HandleTokenRequestResponse();
         }
 
@@ -161,7 +166,7 @@ namespace BPMify_Client.Services
             var request = BuildTokenRequest();
             var keyValues = BuildRequestContentWithAccessToken();
             request.Content = new FormUrlEncodedContent(keyValues);
-            Console.WriteLine("Send token request with code");
+            Console.WriteLine($"Send token request with code: {_code}");
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyAuthenticationClient);
             _response = await httpClient.SendAsync(request);
             await HandleTokenRequestResponse();
@@ -172,16 +177,16 @@ namespace BPMify_Client.Services
             if (_response.IsSuccessStatusCode)//AccessToken received
             {
                 _responseContent = await _response.Content.ReadAsStringAsync();
-                _accessTokenRespond = System.Text.Json.JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent);
+                _accessTokenRespond = JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent, _jsonSerializerOptions);
 
-                Console.WriteLine("AccessToken: " + _accessTokenRespond.access_token);
-                Console.WriteLine("RefreshToken: " + _accessTokenRespond.refresh_token);
+                Console.WriteLine("AccessToken: " + _accessTokenRespond.Access_token);
+                Console.WriteLine("RefreshToken: " + _accessTokenRespond.Refresh_token);
                 _authenticationState = SD.AuthState_ReceivedAccessToken;
                 Console.WriteLine("Reading response string ended");
-                await _player.InitializePlayer(_accessTokenRespond.access_token);
+                await _player.InitializePlayer(_accessTokenRespond.Access_token);
 
                 //store refresh_token in local storage
-                _pkceData.RefreshToken = _accessTokenRespond.refresh_token;
+                _pkceData.RefreshToken = _accessTokenRespond.Refresh_token;
                 await _localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
             }
             else//no AccessToken received
@@ -216,18 +221,21 @@ namespace BPMify_Client.Services
                 _codeChallenge = Base64UrlEncoder.Encode(challengeBytes);
             }
             _pkceData = new PkceData() { Challenge = _codeChallenge, Verifier = _codeVerifier, RefreshToken = "" };
-            //following three lines create an instanciating error
-            //_pkceData.Challenge = _codeChallenge;
-            //_pkceData.Verifier = _codeVerifier;
-            //_pkceData.RefreshToken = "";
 
             await _localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
-
         }
 
         public async Task GetLocalStorageData()
         {
-            _pkceData = await _localStorage.GetItemAsync<PkceData>(Helpers.SD.Local_PkceData);
+            try
+            {
+                _pkceData = await _localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("No PKCE-Data in local storage available");
+            }
+            
         }
     }
 }
