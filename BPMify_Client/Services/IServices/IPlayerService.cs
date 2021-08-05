@@ -1,5 +1,4 @@
-﻿using BPMify_Client.Model.CurrentUserPlaylistsResponse;
-using Microsoft.JSInterop;
+﻿using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +15,9 @@ namespace BPMify_Client.Services.IServices
         public Task Resume();
 
         public bool PlayStatus();
-        public Task<List<BPMify_Client.Model.CurrentUserPlaylistsResponse.Item>> GetCurrentUsersPlaylists();
+        public Task<List<Model.CurrentUserPlaylistsResponse.Item>> GetCurrentUsersPlaylists();
+        public Task<List<Model.PlaylistResponse.Track>> GetPlaylistItems(string playlistId);
+        public Task PlayTrackById(string trackId);
 
     }
 }

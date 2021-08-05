@@ -64,6 +64,25 @@ async function GetMetadataAsync() {
     return JSON.stringify(await player.getCurrentState());//liefert ein Promise 
     //https://developer.spotify.com/documentation/web-playback-sdk/reference/#api-spotify-player-getcurrentstate
 }
+
+function GetCurrentState() {
+    player.getCurrentState().then(state => {
+        if (!state) {
+            console.error('User is not playing music through the Web Playback SDK');
+            return;
+        }
+
+        let {
+            current_track,
+            next_tracks: [next_track]
+        } = state.track_window;
+
+        console.log('Currently Playing', current_track);
+        console.log('Playing Next', next_track);
+    });
+}
+
+
 /*
  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
  An action can be assigned to an already "settled" promise.

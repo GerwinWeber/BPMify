@@ -32,6 +32,8 @@ else
     <div>Loading... </div>
 }
 
+<div class="btn btn-primary" @onclick="() => GetCurrentPlayerState()">GetCurrentPlayerState</div>
+
 
 @*<span class="mb-4"></span>
     <div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>
@@ -58,6 +60,11 @@ else
             Console.WriteLine(_authState);
         }
 
+    }
+
+    public async Task GetCurrentPlayerState()
+    {
+        await js.InvokeVoidAsync("GetCurrentState");
     }
 
     [JSInvokable]

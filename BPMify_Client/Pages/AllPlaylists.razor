@@ -1,4 +1,4 @@
-﻿@page "/playlists"
+﻿@page "/allPlaylists"
 
 @using BPMify_Client.Model.CurrentUserPlaylistsResponse
 
@@ -22,7 +22,9 @@ else
                         foreach (var item in _response)
                         {
                             <tr>
-                                <td>@item.name</td>
+                                <td>
+                                    <NavLink href="@($"/allPlaylists/{item.id}")">@item.name</NavLink>
+                                </td>
                             </tr>
                         }
                     }

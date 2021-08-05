@@ -11,6 +11,7 @@ using System.Net.Http.Headers;
 using BPMify_Client.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using BPMify_Client.Model.CurrentUserPlaylistsResponse;
+using BPMify_Client.Model;
 
 namespace BPMify_Client.Services
 {
@@ -18,9 +19,11 @@ namespace BPMify_Client.Services
     {
         private string _token;
         private IJSRuntime _js;
-        private HttpResponseMessage _response;
+        private string _deviceId = "";
+        
         public bool IsPlaying = false;
         private List<Item> _allUserPlaylists = new List<Item>();
+        private List<Model.PlaylistResponse.Track> _allplaylistTracks = new List<Model.PlaylistResponse.Track>();
         public IHttpClientFactory _clientFactory { get; set; }
 
 
@@ -40,34 +43,20 @@ namespace BPMify_Client.Services
         }
 
 
-
         public async Task TransferPlayback(string deviceId)
         {
-            var request = new HttpRequestMessage(HttpMethod.Put, "/v1/me/player");
-            request.Content = new StringContent("{" + $"\"device_ids\": [\"" + deviceId + $"\"" + "]}");//find a better solution to format into -> {device_ids: ["74ASZWbe4lXaubB36ztrGX"]}
-            Console.WriteLine("Send reqeust for transfer Playback ");
+            _deviceId = deviceId;
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-            var response = await httpClient.SendAsync(request);
+            var uri = new Uri($"https://api.spotify.com/v1/me/player");
+            var requestBody = new TransferPlaybackRequest(deviceId);
+            var response = await httpClient.PutAsJsonAsync<TransferPlaybackRequest>(uri, requestBody);
+
+
             Console.WriteLine("Took control");            
         }
 
-        public async Task Pause()
-        {
-            await _js.InvokeVoidAsync("Pause");
-            IsPlaying = false;
-        }
-
-        public async Task Resume()
-        {
-            await _js.InvokeVoidAsync("Resume");
-            IsPlaying = true;
-        }
-
-        public bool PlayStatus()
-        {
-            return IsPlaying;
-        }
+        
 
         public async Task<List<Item>> GetCurrentUsersPlaylists()
         {
@@ -94,5 +83,58 @@ namespace BPMify_Client.Services
             return _allUserPlaylists;
         }
 
+        public async Task<List<Model.PlaylistResponse.Track>> GetPlaylistItems(string playlistId)
+        {
+            Console.WriteLine($"Send reqeust for get all items of the playlist: {playlistId}");
+
+            var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+            var baseUri = new Uri($"https://api.spotify.com/v1/playlists/{playlistId}");
+            var uri = new Uri(baseUri, "?market=De");
+            var response = await httpClient.GetFromJsonAsync<Model.PlaylistResponse.PlaylistResponse>(uri);
+            foreach (var item in response.tracks.items)
+            {
+                Console.WriteLine($"Name: {item.track.name} Id: {item.track.id}");
+            _allplaylistTracks.Add(item.track);
+            }
+
+
+            
+            Console.WriteLine("Got all playlist items");
+            return _allplaylistTracks;
+        }
+
+        public async Task PlayTrackById(string trackId)
+        {
+            Console.WriteLine($"Send reqeust for play songs by its Id: {trackId}");
+            //https://stackoverflow.com/questions/48532890/spotify-web-api-play-endpoint-play-track
+            var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+            var baseUri = new Uri($"https://api.spotify.com/v1/me/player/play");
+            var uri = new Uri(baseUri, $"?device_id={_deviceId}");
+            var requestBody = new PlayTrackByIdRequest(trackId);
+            var response = await httpClient.PutAsJsonAsync<PlayTrackByIdRequest>(uri, requestBody);
+
+        }
+
+        public async Task Pause()
+        {
+            await _js.InvokeVoidAsync("Pause");
+            IsPlaying = false;
+        }
+
+        public async Task Resume()
+        {
+            await _js.InvokeVoidAsync("Resume");
+            IsPlaying = true;
+        }
+
+        public bool PlayStatus()
+        {
+            return IsPlaying;
+        }
+
     }
+
+    
 }

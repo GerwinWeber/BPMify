@@ -1,0 +1,51 @@
+﻿@page "/allPlaylists/{playlistId}"
+
+@using BPMify_Client.Model.PlaylistResponse
+
+@inject IPlayerService player
+
+<h3>Playlist</h3>
+
+@if (_playlistTracks == null)
+{
+    <div>Loading</div>
+}
+else
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <table class="table table-bordered table-hover">
+                <tbody>
+                    @if (_playlistTracks.Any())
+                    {
+                        foreach (var item in _playlistTracks)
+                        {
+                            <tr>
+                                <td  @onclick="() => player.PlayTrackById(item.id)">@item.name</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5">Keine Songs vorhanden</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string playlistId { get; set; }
+    public List<Model.PlaylistResponse.Track> _playlistTracks = new List<Model.PlaylistResponse.Track>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _playlistTracks = await player.GetPlaylistItems(playlistId);
+        StateHasChanged();
+    }
+
+}

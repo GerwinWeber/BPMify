@@ -83,7 +83,7 @@ namespace BPMify_Client.Services
                     return;
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //Console.WriteLine(e.Message);
                 Console.WriteLine("no RefreshToken found in local storage");
@@ -111,7 +111,7 @@ namespace BPMify_Client.Services
                     await GetLocalStorageData();
                     await RequestAccessTokenWithCode();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     //code not valid
                     Console.WriteLine("code not valid");
