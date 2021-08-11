@@ -7,11 +7,13 @@
 @using Helpers
 @using BPMify_Client.Services.IServices
 @using Model
+@using BPMify_Client.Services
 
 @inject ILocalStorageService localStorage
 @inject IPlayerService player
 @inject ISpotifyAuthenticationService authService
 @inject IJSRuntime js
+@inject PlayerStateManager stateManager
 
 <h1>Hello, world!</h1>
 
@@ -45,9 +47,15 @@ else
 @code{
     public string _authState = "";
     private static DotNetObjectReference<Index> _objRef;
+    private string _playerState { get; set; }
+    private PlayerStateManager _stateManager;
+
+    //public event EventHandler PlayerStateHasChanged;//Call a method in component which call StateHasChangedMethod
 
     protected override async Task OnInitializedAsync()
     {
+        _stateManager = stateManager;
+        _stateManager.PlayerStateHasChanged += UpdateDom;
         if (!player.PlayStatus())
         {
             //if player is not playing
@@ -75,6 +83,12 @@ else
         Console.WriteLine("Rerendered");
         await player.TransferPlayback(deviceId);
         //await player.Resume();
+    }
+
+    public void UpdateDom(object sender, NewStateEventArgs e)
+    {
+        _playerState = e.NewState;
+        StateHasChanged();
     }
 
 }

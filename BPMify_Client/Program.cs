@@ -27,6 +27,7 @@ namespace BPMify_Client
             builder.Services.AddBlazoredLocalStorage();
             builder.Services.AddScoped<IPlayerService, PlayerService>();
             builder.Services.AddScoped<ISpotifyAuthenticationService, SpotifyAuthenticationService>();
+            builder.Services.AddScoped<IPlayerStateManager, PlayerStateManager>();
             builder.Services.AddHttpClient<PlayerService>(SD.HttpClient_SpotifyApiClient, client =>
             {
                 client.BaseAddress = new Uri("https://api.spotify.com");
