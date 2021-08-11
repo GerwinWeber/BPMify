@@ -26,8 +26,8 @@ namespace BPMify_Client
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddBlazoredLocalStorage();
             builder.Services.AddScoped<IPlayerService, PlayerService>();
-            builder.Services.AddScoped<ISpotifyAuthenticationService, SpotifyAuthenticationService>();
-            builder.Services.AddScoped<IPlayerStateManager, PlayerStateManager>();
+            builder.Services.AddScoped<ISpotifyAuthenticationService, SpotifyAuthenticationService>();//the components only uses the interface to call the functions
+            builder.Services.AddScoped<PlayerStateManager>();//all the components use the same instance of this class in the whole project
             builder.Services.AddHttpClient<PlayerService>(SD.HttpClient_SpotifyApiClient, client =>
             {
                 client.BaseAddress = new Uri("https://api.spotify.com");

@@ -45,16 +45,18 @@ namespace BPMify_Client.Services
         public ILocalStorageService _localStorage;
         public IJSRuntime _js;
         public IHttpClientFactory _clientFactory { get; set; }
+        public PlayerStateManager _stateManager { get; set; }
         private JsonSerializerOptions _jsonSerializerOptions;
         
 
-        public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager, IHttpClientFactory clientFactory)
+        public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager,[FromServices] PlayerStateManager stateManager, IHttpClientFactory clientFactory)
         {
             _localStorage = localStorage;
             _player = player;
             _js = js;
             _navManager = navManager;
             _clientFactory = clientFactory;
+            _stateManager = stateManager;
             _jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
         }
 
@@ -79,6 +81,7 @@ namespace BPMify_Client.Services
                     //RefreshToken found in local storage
                     _authenticationState = SD.AuthState_RefreshTokenStored;
                     Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+                    _stateManager.ValidTokenAvailable = true;
                     await RequestAccessTokenWithRefreshToken();
                     return;
                 }

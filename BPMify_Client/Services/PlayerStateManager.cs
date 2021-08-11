@@ -9,42 +9,71 @@ namespace BPMify_Client.Services
 {
     public class PlayerStateManager : IPlayerStateManager
     {
-        private bool _localStorageHasPkceData;
+        private bool _localStorageHasPkceData = false;
 
         public bool LocalStorageHasPkceData
         {
             get { return _localStorageHasPkceData; }
             set 
             {
+                Console.WriteLine("SetPkceData");
                 _localStorageHasPkceData = value;
                 UpdatePlayerState();
-                //PlayerStateHasChanged?.Invoke(this, EventArgs.Empty);
+            }
+        } 
+
+        public bool UrlContainsCode { get; set; } = false;
+
+        private bool _validTokenAvaiblable = false;
+
+        public bool ValidTokenAvailable
+        {
+            get { return _validTokenAvaiblable; }
+            set {
+                _validTokenAvaiblable = value;
+                UpdatePlayerState();
             }
         }
 
-        public bool UrlContainsCode { get; set; }
-        public bool ValidTokenAvailable { get; set; }
-        public bool LocalPlayerIsReady { get; set; }
-        public bool LocalPlayerIsAcitve { get; set; }
+        private bool _localPlayerIsReady = false;
+
+        public bool LocalPlayerIsReady
+        {
+            get { return _localPlayerIsReady; }
+            set { 
+                _localPlayerIsReady = value;
+                UpdatePlayerState();
+            }
+        }
+
+
+        public bool LocalPlayerIsAcitve { get; set; } = false;
+
+        public string PlayerState { get; set; } = SD.PlayerState_FirstRender;
 
         public event EventHandler<NewStateEventArgs> PlayerStateHasChanged;//Call a method in component which call StateHasChangedMethod
 
+        public string GetPlayerState()
+        {
+            return PlayerState;
+        }
+
         public string UpdatePlayerState()
         {
-            NewStateEventArgs newState;
-            if (!LocalStorageHasPkceData && UrlContainsCode && !ValidTokenAvailable)
+            if (!_localStorageHasPkceData && UrlContainsCode && !_validTokenAvaiblable)
             {
-                newState = new NewStateEventArgs(SD.PlayerState_ReceivedCode);
+                PlayerState = SD.PlayerState_ReceivedCode;
             }
-            else if (!LocalStorageHasPkceData && !UrlContainsCode && ValidTokenAvailable)
+            else if (!_localStorageHasPkceData && !UrlContainsCode && _validTokenAvaiblable)
             {
-                newState = new NewStateEventArgs(SD.PlayerState_ReceivedToken);
+                PlayerState = SD.PlayerState_ReceivedToken;
             }
             else
             {
-                newState = new NewStateEventArgs(SD.PlayerState_FirstReneder);
+                PlayerState = SD.PlayerState_FirstRender;
             }
-            PlayerStateHasChanged?.Invoke(this, newState);
+            PlayerStateHasChanged?.Invoke(this, new NewStateEventArgs(PlayerState));
+            //Console.WriteLine("Update player state to: " +PlayerState);
             return "";
         }
 

@@ -26,11 +26,14 @@ namespace BPMify_Client.Services
         private List<Model.PlaylistResponse.Track> _allplaylistTracks = new List<Model.PlaylistResponse.Track>();
         public IHttpClientFactory _clientFactory { get; set; }
 
+        //public IPlayerStateManager _stateManager { get; set; }
+
 
         public PlayerService(IHttpClientFactory clientFactory,[FromServices] IJSRuntime js)
         {
             _clientFactory = clientFactory;//Service is defined in Programm.cs in line -> builder.Services.AddHttpClient<PlayerService>("ApiClient",...
             _js = js;
+            //_stateManager = stateManager;
         }
 
         

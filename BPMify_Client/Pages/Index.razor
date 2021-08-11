@@ -17,13 +17,13 @@
 
 <h1>Hello, world!</h1>
 
-@if (_authState == SD.PlayerState_PlayerNotInitialized)
+@if (stateManager.PlayerState == SD.PlayerState_FirstRender)
 {
     <a class="btn btn-primary" @onclick="authService.NavigateToSpotifyLogin">
         Login
     </a>
 }
-else if (_authState == SD.PlayerState_PlayerReady || player.PlayStatus())
+else if (stateManager.PlayerState == SD.PlayerState_PlayerReady)
 {
     <div class="btn btn-primary" @onclick="() => player.Resume()">Resume Playing</div>
     <div class="btn btn-primary" @onclick="() => player.Pause()">Pause Playing</div>
@@ -35,7 +35,9 @@ else
 }
 
 <div class="btn btn-primary" @onclick="() => GetCurrentPlayerState()">GetCurrentPlayerState</div>
-
+<div>PkceData: @stateManager.LocalStorageHasPkceData</div>
+<div>Valid Token available: @stateManager.ValidTokenAvailable</div>
+<div>Local Player is ready: @stateManager.LocalPlayerIsReady</div>
 
 @*<span class="mb-4"></span>
     <div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>
@@ -48,17 +50,20 @@ else
     public string _authState = "";
     private static DotNetObjectReference<Index> _objRef;
     private string _playerState { get; set; }
-    private PlayerStateManager _stateManager;
+    //private PlayerStateManager _stateManager = new PlayerStateManager();
 
     //public event EventHandler PlayerStateHasChanged;//Call a method in component which call StateHasChangedMethod
 
     protected override async Task OnInitializedAsync()
     {
-        _stateManager = stateManager;
-        _stateManager.PlayerStateHasChanged += UpdateDom;
-        if (!player.PlayStatus())
+        //_stateManager.PlayerStateHasChanged += UpdateDom;
+        //_playerState = _stateManager.GetPlayerState();
+
+        stateManager.PlayerStateHasChanged += UpdateDom;
+
+
+        if (stateManager.PlayerState == SD.PlayerState_FirstRender)
         {
-            //if player is not playing
             _authState = SD.PlayerState_TryToAuthenticate;
             _objRef = DotNetObjectReference.Create(this);
             var result = await js.InvokeAsync<string>("SetIndexComponentRef", _objRef);
@@ -67,6 +72,18 @@ else
             _authState = authService.GetAuthState();
             Console.WriteLine(_authState);
         }
+
+        //if (!player.PlayStatus())
+        //{
+        //    //if player is not playing
+        //    _authState = SD.PlayerState_TryToAuthenticate;
+        //    _objRef = DotNetObjectReference.Create(this);
+        //    var result = await js.InvokeAsync<string>("SetIndexComponentRef", _objRef);
+
+        //    await authService.CheckAuthenticationState();
+        //    _authState = authService.GetAuthState();
+        //    Console.WriteLine(_authState);
+        //}
 
     }
 
@@ -79,6 +96,7 @@ else
     public async Task TransferPlayback(string deviceId)
     {
         _authState = SD.PlayerState_PlayerReady;
+        stateManager.LocalPlayerIsReady = true;
         StateHasChanged();
         Console.WriteLine("Rerendered");
         await player.TransferPlayback(deviceId);
