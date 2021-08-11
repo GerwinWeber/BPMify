@@ -35,9 +35,11 @@ else
 }
 
 <div class="btn btn-primary" @onclick="() => GetCurrentPlayerState()">GetCurrentPlayerState</div>
-<div>PkceData: @stateManager.LocalStorageHasPkceData</div>
+@*<div>PkceData: @stateManager.LocalStorageHasPkceData</div>*@
 <div>Valid Token available: @stateManager.ValidTokenAvailable</div>
 <div>Local Player is ready: @stateManager.LocalPlayerIsReady</div>
+<div>Local Player is active: @stateManager.LocalPlayerIsAcitve</div>
+<div>Playerstate: @stateManager.PlayerState</div>
 
 @*<span class="mb-4"></span>
     <div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>

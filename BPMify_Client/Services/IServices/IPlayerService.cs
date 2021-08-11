@@ -13,8 +13,6 @@ namespace BPMify_Client.Services.IServices
         public Task TransferPlayback(string deviceId);
         public Task Pause();
         public Task Resume();
-
-        public bool PlayStatus();
         public Task<List<Model.CurrentUserPlaylistsResponse.Item>> GetCurrentUsersPlaylists();
         public Task<List<Model.PlaylistResponse.Track>> GetPlaylistItems(string playlistId);
         public Task PlayTrackById(string trackId);

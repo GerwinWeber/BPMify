@@ -91,7 +91,12 @@ namespace BPMify_Client.Services
                 //Console.WriteLine(e.Message);
                 Console.WriteLine("no RefreshToken found in local storage");
             }
-            await CheckForRecievedCode();
+            if (!_stateManager.ValidTokenAvailable)
+            {
+                //no Refresh token stored in local storage
+                Console.WriteLine("Check for code");
+                await CheckForRecievedCode();
+            }
         }
 
         public async Task CheckForRecievedCode()

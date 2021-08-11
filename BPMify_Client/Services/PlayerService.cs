@@ -21,7 +21,6 @@ namespace BPMify_Client.Services
         private IJSRuntime _js;
         private string _deviceId = "";
         
-        public bool IsPlaying = false;
         private List<Item> _allUserPlaylists = new List<Item>();
         private List<Model.PlaylistResponse.Track> _allplaylistTracks = new List<Model.PlaylistResponse.Track>();
         public IHttpClientFactory _clientFactory { get; set; }
@@ -123,19 +122,14 @@ namespace BPMify_Client.Services
         public async Task Pause()
         {
             await _js.InvokeVoidAsync("Pause");
-            IsPlaying = false;
         }
 
         public async Task Resume()
         {
             await _js.InvokeVoidAsync("Resume");
-            IsPlaying = true;
         }
 
-        public bool PlayStatus()
-        {
-            return IsPlaying;
-        }
+
 
     }
 

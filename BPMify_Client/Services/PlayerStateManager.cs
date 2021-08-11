@@ -7,20 +7,20 @@ using System.Threading.Tasks;
 
 namespace BPMify_Client.Services
 {
-    public class PlayerStateManager : IPlayerStateManager
+    public class PlayerStateManager 
     {
-        private bool _localStorageHasPkceData = false;
+        //private bool _localStorageHasPkceData = false;
 
-        public bool LocalStorageHasPkceData
-        {
-            get { return _localStorageHasPkceData; }
-            set 
-            {
-                Console.WriteLine("SetPkceData");
-                _localStorageHasPkceData = value;
-                UpdatePlayerState();
-            }
-        } 
+        //public bool LocalStorageHasPkceData
+        //{
+        //    get { return _localStorageHasPkceData; }
+        //    set 
+        //    {
+        //        Console.WriteLine("SetPkceData");
+        //        _localStorageHasPkceData = value;
+        //        UpdatePlayerState();
+        //    }
+        //} 
 
         public bool UrlContainsCode { get; set; } = false;
 
@@ -45,29 +45,37 @@ namespace BPMify_Client.Services
                 UpdatePlayerState();
             }
         }
+        private bool _localPlayerIsActive = false;
 
+        public bool LocalPlayerIsAcitve
+        {
+            get { return _localPlayerIsActive; }
+            set { _localPlayerIsActive = value; }
+        }
 
-        public bool LocalPlayerIsAcitve { get; set; } = false;
 
         public string PlayerState { get; set; } = SD.PlayerState_FirstRender;
 
         public event EventHandler<NewStateEventArgs> PlayerStateHasChanged;//Call a method in component which call StateHasChangedMethod
 
-        public string GetPlayerState()
-        {
-            return PlayerState;
-        }
-
         public string UpdatePlayerState()
         {
-            if (!_localStorageHasPkceData && UrlContainsCode && !_validTokenAvaiblable)
+            if (_validTokenAvaiblable && !_localPlayerIsReady && !_localPlayerIsActive)
             {
                 PlayerState = SD.PlayerState_ReceivedCode;
             }
-            else if (!_localStorageHasPkceData && !UrlContainsCode && _validTokenAvaiblable)
+            else if (!_validTokenAvaiblable)
             {
-                PlayerState = SD.PlayerState_ReceivedToken;
+                PlayerState = SD.PlayerState_NoTokenAvailable;
             }
+            else if (_localPlayerIsReady)
+            {
+                PlayerState = SD.PlayerState_PlayerReady;
+            }
+            //else if (_localPlayerIsActive)
+            //{
+            //    PlayerState = SD.PlayerState_PlayerActive;
+            //}
             else
             {
                 PlayerState = SD.PlayerState_FirstRender;
