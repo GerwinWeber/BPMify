@@ -9,18 +9,17 @@ namespace BPMify_Client.Services
 {
     public class PlayerStateManager 
     {
-        //private bool _localStorageHasPkceData = false;
+        private bool _tryToAuthenticate = false;
 
-        //public bool LocalStorageHasPkceData
-        //{
-        //    get { return _localStorageHasPkceData; }
-        //    set 
-        //    {
-        //        Console.WriteLine("SetPkceData");
-        //        _localStorageHasPkceData = value;
-        //        UpdatePlayerState();
-        //    }
-        //} 
+        public bool TryToAuthenticate
+        {
+            get { return _tryToAuthenticate; }
+            set
+            {
+                _tryToAuthenticate = value;
+                UpdatePlayerState();
+            }
+        }
 
         public bool UrlContainsCode { get; set; } = false;
 
@@ -45,13 +44,13 @@ namespace BPMify_Client.Services
                 UpdatePlayerState();
             }
         }
-        private bool _localPlayerIsActive = false;
+        //private bool _localPlayerIsActive = false;
 
-        public bool LocalPlayerIsAcitve
-        {
-            get { return _localPlayerIsActive; }
-            set { _localPlayerIsActive = value; }
-        }
+        //public bool LocalPlayerIsAcitve
+        //{
+        //    get { return _localPlayerIsActive; }
+        //    set { _localPlayerIsActive = value; }
+        //}
 
 
         public string PlayerState { get; set; } = SD.PlayerState_FirstRender;
@@ -60,13 +59,17 @@ namespace BPMify_Client.Services
 
         public string UpdatePlayerState()
         {
-            if (_validTokenAvaiblable && !_localPlayerIsReady && !_localPlayerIsActive)
+            if (_validTokenAvaiblable && !_localPlayerIsReady)
             {
                 PlayerState = SD.PlayerState_ReceivedCode;
             }
-            else if (!_validTokenAvaiblable)
+            else if (_tryToAuthenticate && !_validTokenAvaiblable && !_localPlayerIsReady)
             {
                 PlayerState = SD.PlayerState_NoTokenAvailable;
+            }
+            else if (!_tryToAuthenticate && !_validTokenAvaiblable && !_localPlayerIsReady)
+            {
+                PlayerState = SD.PlayerState_AuthenticatioFailed;
             }
             else if (_localPlayerIsReady)
             {
@@ -81,8 +84,13 @@ namespace BPMify_Client.Services
                 PlayerState = SD.PlayerState_FirstRender;
             }
             PlayerStateHasChanged?.Invoke(this, new NewStateEventArgs(PlayerState));
-            //Console.WriteLine("Update player state to: " +PlayerState);
+            Console.WriteLine("Update player state to: " +PlayerState);
             return "";
+        }
+
+        public void UpdateDom()
+        {
+            PlayerStateHasChanged?.Invoke(this, new NewStateEventArgs(""));
         }
 
 
@@ -90,16 +98,16 @@ namespace BPMify_Client.Services
 
     public class NewStateEventArgs : EventArgs
     {
-        private readonly string newState;
+        private readonly string _newState;
 
-        public NewStateEventArgs(string test)
+        public NewStateEventArgs(string newState)
         {
-            this.newState = test;
+            this._newState = newState;
         }
 
         public string NewState
         {
-            get { return this.newState; }
+            get { return this._newState; }
         }
     }
 }

@@ -20,19 +20,22 @@ namespace BPMify_Client.Services
         private string _token;
         private IJSRuntime _js;
         private string _deviceId = "";
-        
-        private List<Item> _allUserPlaylists = new List<Item>();
-        private List<Model.PlaylistResponse.Track> _allplaylistTracks = new List<Model.PlaylistResponse.Track>();
+        private string _lastPlaylistId = "";
+
+        private List<Item> _allUserPlaylists;
+        private List<Model.PlaylistResponse.Track> _allplaylistTracks;
         public IHttpClientFactory _clientFactory { get; set; }
+        private SpotifyApiResponseHandler _responseHandler;
 
-        //public IPlayerStateManager _stateManager { get; set; }
+        public PlayerStateManager _stateManager { get; set; }
 
 
-        public PlayerService(IHttpClientFactory clientFactory,[FromServices] IJSRuntime js)
+        public PlayerService(IHttpClientFactory clientFactory,[FromServices] IJSRuntime js, [FromServices] PlayerStateManager stateManager, [FromServices] SpotifyApiResponseHandler responseHandler)
         {
             _clientFactory = clientFactory;//Service is defined in Programm.cs in line -> builder.Services.AddHttpClient<PlayerService>("ApiClient",...
             _js = js;
-            //_stateManager = stateManager;
+            _stateManager = stateManager;
+            _responseHandler = responseHandler;
         }
 
         
@@ -53,58 +56,77 @@ namespace BPMify_Client.Services
             var uri = new Uri($"https://api.spotify.com/v1/me/player");
             var requestBody = new TransferPlaybackRequest(deviceId);
             var response = await httpClient.PutAsJsonAsync<TransferPlaybackRequest>(uri, requestBody);
-
-
-            Console.WriteLine("Took control");            
+            if (_responseHandler.IsRequestSuccessfull(response))
+            {
+                _stateManager.LocalPlayerIsReady = true;
+                _stateManager.TryToAuthenticate = false;
+                Console.WriteLine("Took control");
+            }
+            else
+            {
+                Console.WriteLine("The request failed with " + response.StatusCode);
+            }
+                       
         }
 
         
 
         public async Task<List<Item>> GetCurrentUsersPlaylists()
         {
-            Console.WriteLine("Send reqeust for get Playlists of the current user");
-            int counter = 0;
-            int amountOfItems = 50;
-            while(amountOfItems == 50)
+            if (_allUserPlaylists == null)
             {
-                var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-                var baseUri = new Uri("https://api.spotify.com/v1/me/playlists");
-                var uri = new Uri(baseUri, $"?limit=50&offset={counter}");
-                var response = await httpClient.GetFromJsonAsync<CurrentUserPlaylistsResponse>(uri);
-                foreach (var item in response.items)
+                _allUserPlaylists = new List<Item>();
+                Console.WriteLine("Send reqeust for get Playlists of the current user");
+                int counter = 0;
+                int amountOfItems = 50;
+                while (amountOfItems == 50)
                 {
-                    Console.WriteLine($"Name: {item.name} Id: {item.id}");
-                    _allUserPlaylists.Add(item);
-                    counter += 1;
+                    var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+                    var baseUri = new Uri("https://api.spotify.com/v1/me/playlists");
+                    var uri = new Uri(baseUri, $"?limit=50&offset={counter}");
+                    var response = await httpClient.GetFromJsonAsync<CurrentUserPlaylistsResponse>(uri);
+                    foreach (var item in response.items)
+                    {
+                        Console.WriteLine($"Name: {item.name} Id: {item.id}");
+                        _allUserPlaylists.Add(item);
+                        counter += 1;
+                    }
+                    amountOfItems = response.items.Count<Item>();
+
                 }
-                amountOfItems = response.items.Count<Item>();
-                
+                Console.WriteLine("Got all playlists");
+                return _allUserPlaylists;
             }
-            Console.WriteLine("Got all playlists");
             return _allUserPlaylists;
         }
 
         public async Task<List<Model.PlaylistResponse.Track>> GetPlaylistItems(string playlistId)
         {
-            Console.WriteLine($"Send reqeust for get all items of the playlist: {playlistId}");
-
-            var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-            var baseUri = new Uri($"https://api.spotify.com/v1/playlists/{playlistId}");
-            var uri = new Uri(baseUri, "?market=De");
-            var response = await httpClient.GetFromJsonAsync<Model.PlaylistResponse.PlaylistResponse>(uri);
-            foreach (var item in response.tracks.items)
+            if (_lastPlaylistId != playlistId)
             {
-                Console.WriteLine($"Name: {item.track.name} Id: {item.track.id}");
-            _allplaylistTracks.Add(item.track);
+                _allplaylistTracks = new List<Model.PlaylistResponse.Track>();
+                Console.WriteLine($"Send reqeust for get all items of the playlist: {playlistId}");
+
+                var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyApiClient);
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+                var baseUri = new Uri($"https://api.spotify.com/v1/playlists/{playlistId}");
+                var uri = new Uri(baseUri, "?market=De");
+                var response = await httpClient.GetFromJsonAsync<Model.PlaylistResponse.PlaylistResponse>(uri);
+                foreach (var item in response.tracks.items)
+                {
+                    Console.WriteLine($"Name: {item.track.name} Id: {item.track.id}");
+                    _allplaylistTracks.Add(item.track);
+                }
+                Console.WriteLine("Got all playlist items");
+                _lastPlaylistId = playlistId;
+                return _allplaylistTracks;
+
             }
-
-
-            
-            Console.WriteLine("Got all playlist items");
             return _allplaylistTracks;
         }
+
+        
 
         public async Task PlayTrackById(string trackId)
         {

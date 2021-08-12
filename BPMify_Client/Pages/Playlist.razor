@@ -1,8 +1,12 @@
 ﻿@page "/allPlaylists/{playlistId}"
 
-@using BPMify_Client.Model.PlaylistResponse
+
+@using BPMify_Client.Helpers;
+
 
 @inject IPlayerService player
+@inject PlayerStateManager stateManager
+@inject NavigationManager NavManager
 
 <h3>Playlist</h3>
 
@@ -21,7 +25,7 @@ else
                         foreach (var item in _playlistTracks)
                         {
                             <tr>
-                                <td  @onclick="() => player.PlayTrackById(item.id)">@item.name</td>
+                                <td @onclick="() => player.PlayTrackById(item.id)">@item.name</td>
                             </tr>
                         }
                     }
@@ -44,8 +48,16 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _playlistTracks = await player.GetPlaylistItems(playlistId);
-        StateHasChanged();
+        if (stateManager.PlayerState == SD.PlayerState_FirstRender)
+        {
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            _playlistTracks = await player.GetPlaylistItems(playlistId);
+            StateHasChanged();
+        }
     }
+
 
 }

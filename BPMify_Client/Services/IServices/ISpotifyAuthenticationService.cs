@@ -9,8 +9,6 @@ namespace BPMify_Client.Services.IServices
     public interface ISpotifyAuthenticationService
     {
         public Task CheckAuthenticationState();
-        public void SetAuthState(string state);
-        public string GetAuthState();
         public Task CheckForRecievedCode();
         public HttpRequestMessage BuildTokenRequest();
         public List<KeyValuePair<string, string>> BuildRequestContentWithAccessToken();

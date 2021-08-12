@@ -45,11 +45,13 @@ namespace BPMify_Client.Services
         public ILocalStorageService _localStorage;
         public IJSRuntime _js;
         public IHttpClientFactory _clientFactory { get; set; }
+        private SpotifyApiResponseHandler _responseHandler;
         public PlayerStateManager _stateManager { get; set; }
         private JsonSerializerOptions _jsonSerializerOptions;
         
 
-        public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager,[FromServices] PlayerStateManager stateManager, IHttpClientFactory clientFactory)
+        public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager,
+            [FromServices] PlayerStateManager stateManager,[FromServices] SpotifyApiResponseHandler responseHandler, IHttpClientFactory clientFactory)
         {
             _localStorage = localStorage;
             _player = player;
@@ -58,16 +60,13 @@ namespace BPMify_Client.Services
             _clientFactory = clientFactory;
             _stateManager = stateManager;
             _jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+            _responseHandler = responseHandler;
+            _responseHandler.AccessTokenExpired += StartNewAuthentication;
         }
 
-        public void SetAuthState(string state)
+        public void StartNewAuthentication(object sender, EventArgs e)
         {
-            _authenticationState = state;
-        }
-
-        public string GetAuthState()
-        {
-            return _authenticationState;
+            CheckAuthenticationState().GetAwaiter();
         }
 
         public async Task CheckAuthenticationState()
@@ -109,6 +108,7 @@ namespace BPMify_Client.Services
                 //no code for requesting Accesstoken available
                 _authenticationState = SD.PlayerState_PlayerNotInitialized;
                 Console.WriteLine("no code for requesting Accesstoken available");
+                _stateManager.TryToAuthenticate = false;
             }
             else
             {
@@ -123,6 +123,7 @@ namespace BPMify_Client.Services
                 {
                     //code not valid
                     Console.WriteLine("code not valid");
+                    _stateManager.TryToAuthenticate = false;
                     _authenticationState = SD.PlayerState_PlayerNotInitialized;
                 }
             }
@@ -163,7 +164,10 @@ namespace BPMify_Client.Services
             Console.WriteLine("Send token request");
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyAuthenticationClient);
             _response = await httpClient.PostAsync("https://accounts.spotify.com/api/token", request.Content);
-            await HandleTokenRequestResponse();
+            if (_responseHandler.IsRequestSuccessfull(_response))
+            {
+                await HandleTokenRequestResponse();
+            }
         }
 
         public async Task RequestAccessTokenWithCode()
@@ -177,30 +181,29 @@ namespace BPMify_Client.Services
             Console.WriteLine($"Send token request with code: {_code}");
             var httpClient = _clientFactory.CreateClient(SD.HttpClient_SpotifyAuthenticationClient);
             _response = await httpClient.SendAsync(request);
-            await HandleTokenRequestResponse();
-        }
-
-        public async Task HandleTokenRequestResponse()
-        {
-            if (_response.IsSuccessStatusCode)//AccessToken received
+            if (_responseHandler.IsRequestSuccessfull(_response))
             {
-                _responseContent = await _response.Content.ReadAsStringAsync();
-                _accessTokenRespond = JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent, _jsonSerializerOptions);
-
-                Console.WriteLine("AccessToken: " + _accessTokenRespond.Access_token);
-                Console.WriteLine("RefreshToken: " + _accessTokenRespond.Refresh_token);
-                _authenticationState = SD.AuthState_ReceivedAccessToken;
-                Console.WriteLine("Reading response string ended");
-                await _player.InitializePlayer(_accessTokenRespond.Access_token);
-
-                //store refresh_token in local storage
-                _pkceData.RefreshToken = _accessTokenRespond.Refresh_token;
-                await _localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
+                await HandleTokenRequestResponse();
             }
             else//no AccessToken received
             {
                 Console.WriteLine("no AccessToken received");
             }
+        }
+
+        public async Task HandleTokenRequestResponse()
+        {
+            _responseContent = await _response.Content.ReadAsStringAsync();
+            _accessTokenRespond = JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent, _jsonSerializerOptions);
+
+            Console.WriteLine("AccessToken: " + _accessTokenRespond.Access_token);
+            Console.WriteLine("RefreshToken: " + _accessTokenRespond.Refresh_token);
+            _authenticationState = SD.AuthState_ReceivedAccessToken;
+            await _player.InitializePlayer(_accessTokenRespond.Access_token);
+
+            //store refresh_token in local storage
+            _pkceData.RefreshToken = _accessTokenRespond.Refresh_token;
+            await _localStorage.SetItemAsync<PkceData>(SD.Local_PkceData, _pkceData);
         }
 
         public async Task NavigateToSpotifyLogin()

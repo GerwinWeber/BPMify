@@ -1,13 +1,15 @@
 ﻿@page "/allPlaylists"
 
-@using BPMify_Client.Model.CurrentUserPlaylistsResponse
+
+@using BPMify_Client.Helpers;
 
 @inject IPlayerService player
-
+@inject PlayerStateManager stateManager
+@inject NavigationManager NavManager
 
 <h3>Playlists</h3>
 
-@if(_response == null)
+@if (_response == null)
 {
     <div>Loading</div>
 }
@@ -43,13 +45,21 @@ else
 
 
 
-@code {      
+@code {
 
     private List<BPMify_Client.Model.CurrentUserPlaylistsResponse.Item> _response;
 
     protected override async Task OnInitializedAsync()
     {
-        _response = await player.GetCurrentUsersPlaylists();
-        StateHasChanged();
+
+        if (stateManager.PlayerState == SD.PlayerState_FirstRender)
+        {
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            _response = await player.GetCurrentUsersPlaylists();
+            StateHasChanged();
+        }
     }
 }

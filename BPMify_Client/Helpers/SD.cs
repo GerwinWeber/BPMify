@@ -23,6 +23,7 @@ namespace BPMify_Client.Helpers
 
 
         public const string PlayerState_TryToAuthenticate = "TryToAuthenticate";
+        public const string PlayerState_AuthenticatioFailed = "AuthenticatioFailed";
         public const string PlayerState_PlayerNotInitialized = "PlayerNotInitialized";
         public const string PlayerState_PlayerReady = "PlayerReady";
         public const string PlayerState_PlayerActive = "PlayerActive";

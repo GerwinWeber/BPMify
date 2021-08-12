@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace BPMify_Client.Services.IServices
 {
+    //obsolet
     public interface IPlayerStateManager
     {
         public string UpdatePlayerState();
