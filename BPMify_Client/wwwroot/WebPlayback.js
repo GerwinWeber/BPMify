@@ -11,9 +11,9 @@ function SetPlaylistsComponentRef(objRef) {
 }
 
 function RefreshToken(token) {
-
     player.getOAuthToken = token;
 }
+
 
 function InitializePlayer(token) {
     player = new Spotify.Player({

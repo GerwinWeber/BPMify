@@ -9,7 +9,7 @@ namespace BPMify_Client.Services.IServices
 {
     public interface IPlayerService
     {
-        public Task InitializePlayer(string token);
+        public Task PassTokenToPlayer(string token);
         public Task TransferPlayback(string deviceId);
         public Task Pause();
         public Task Resume();

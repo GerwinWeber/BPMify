@@ -40,10 +40,17 @@ namespace BPMify_Client.Services
 
         
 
-        public async Task InitializePlayer(string token)
+        public async Task PassTokenToPlayer(string token)
         {
             _token = token;
-            await _js.InvokeVoidAsync("InitializePlayer", _token);// WEB SDK Player initialisieren
+            if (_stateManager.PlayerState == SD.PlayerState_PlayerReady)
+            {
+                await _js.InvokeVoidAsync("RefreshToken", _token); // Refresh token of WEB SDK Player
+            }
+            else
+            {
+                await _js.InvokeVoidAsync("InitializePlayer", _token);// WEB SDK Player initialisieren
+            }
             //_playerstate = SD.PlayerState_InitializePlayer;
         }
 

@@ -17,6 +17,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Web;
 
 namespace BPMify_Client.Services
@@ -42,13 +43,14 @@ namespace BPMify_Client.Services
 
 
         private IPlayerService _player;
-        public ILocalStorageService _localStorage;
-        public IJSRuntime _js;
-        public IHttpClientFactory _clientFactory { get; set; }
+        private ILocalStorageService _localStorage;
+        private IJSRuntime _js;
+        private IHttpClientFactory _clientFactory;
         private SpotifyApiResponseHandler _responseHandler;
-        public PlayerStateManager _stateManager { get; set; }
+        private PlayerStateManager _stateManager;
         private JsonSerializerOptions _jsonSerializerOptions;
-        
+        private static Timer _refreshTokenTimer;
+
 
         public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager,
             [FromServices] PlayerStateManager stateManager,[FromServices] SpotifyApiResponseHandler responseHandler, IHttpClientFactory clientFactory)
@@ -61,13 +63,20 @@ namespace BPMify_Client.Services
             _stateManager = stateManager;
             _jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
             _responseHandler = responseHandler;
-            _responseHandler.AccessTokenExpired += StartNewAuthentication;
+            //_responseHandler.AccessTokenExpired +=  async (sender, e) => await StartNewAuthentication(sender, e);//this line is the reason to use the class instead of the interface
         }
 
-        public void StartNewAuthentication(object sender, EventArgs e)
+        //public async Task StartNewAuthentication(object sender, EventArgs e)
+        //{
+        //    await CheckAuthenticationState();
+        //}
+
+        public async Task StartNewAuthentication(object sender, ElapsedEventArgs e)
         {
-            CheckAuthenticationState().GetAwaiter();
+            Console.WriteLine("Automatically request new Access Token");
+            await CheckAuthenticationState();
         }
+
 
         public async Task CheckAuthenticationState()
         {
@@ -193,13 +202,15 @@ namespace BPMify_Client.Services
 
         public async Task HandleTokenRequestResponse()
         {
+            StopAndDisposeRefreshTokenTimer();
+            SetRefreshTokenTimer();
             _responseContent = await _response.Content.ReadAsStringAsync();
             _accessTokenRespond = JsonSerializer.Deserialize<AccessTokenResponse>(_responseContent, _jsonSerializerOptions);
 
             Console.WriteLine("AccessToken: " + _accessTokenRespond.Access_token);
             Console.WriteLine("RefreshToken: " + _accessTokenRespond.Refresh_token);
             _authenticationState = SD.AuthState_ReceivedAccessToken;
-            await _player.InitializePlayer(_accessTokenRespond.Access_token);
+            await _player.PassTokenToPlayer(_accessTokenRespond.Access_token);
 
             //store refresh_token in local storage
             _pkceData.RefreshToken = _accessTokenRespond.Refresh_token;
@@ -248,5 +259,25 @@ namespace BPMify_Client.Services
             }
             
         }
+
+        #region RequestNewAccessTokenBeforeItExpires
+        private void SetRefreshTokenTimer()
+        {
+            //Timer für Token refresh setzen
+            _refreshTokenTimer = new Timer(3300000);//3.300.000ms = 55min
+            _refreshTokenTimer.Elapsed += async (sender, e) => await StartNewAuthentication(sender, e);
+            _refreshTokenTimer.AutoReset = false;
+            _refreshTokenTimer.Enabled = true;
+        }
+
+        private void StopAndDisposeRefreshTokenTimer()
+        {
+            if (_refreshTokenTimer != null)
+            {
+                _refreshTokenTimer.Stop();
+                _refreshTokenTimer.Dispose();
+            }
+        }
+        #endregion
     }
 }

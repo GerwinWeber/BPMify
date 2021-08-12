@@ -10,6 +10,6 @@ namespace BPMify_Client.Services.IServices
     {
         public bool IsRequestSuccessfull(HttpResponseMessage response);
 
-        public event EventHandler<EventArgs> AccessTokenExpired;
+        //public event EventHandler<EventArgs> AccessTokenExpired;
     }
 }

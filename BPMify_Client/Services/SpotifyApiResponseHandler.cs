@@ -9,7 +9,7 @@ namespace BPMify_Client.Services
 {
     public class SpotifyApiResponseHandler : ISpotifyApiResponseHandler
     {
-        public event EventHandler<EventArgs> AccessTokenExpired;
+        //public event EventHandler<EventArgs> AccessTokenExpired;
 
         public bool IsRequestSuccessfull(HttpResponseMessage response)
         {
@@ -35,7 +35,7 @@ namespace BPMify_Client.Services
                 case System.Net.HttpStatusCode.Unauthorized:
                     //401
                     Console.WriteLine("HttpStatusCode: 401");
-                    AccessTokenExpired?.Invoke(this, EventArgs.Empty);
+                    //AccessTokenExpired?.Invoke(this, EventArgs.Empty);
                     return false;
                 case System.Net.HttpStatusCode.PaymentRequired:
                     //402
