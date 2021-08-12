@@ -46,14 +46,14 @@ namespace BPMify_Client.Services
         private ILocalStorageService _localStorage;
         private IJSRuntime _js;
         private IHttpClientFactory _clientFactory;
-        private SpotifyApiResponseHandler _responseHandler;
+        private ISpotifyApiResponseHandler _responseHandler;
         private PlayerStateManager _stateManager;
         private JsonSerializerOptions _jsonSerializerOptions;
         private static Timer _refreshTokenTimer;
 
 
         public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager,
-            [FromServices] PlayerStateManager stateManager,[FromServices] SpotifyApiResponseHandler responseHandler, IHttpClientFactory clientFactory)
+            [FromServices] PlayerStateManager stateManager,[FromServices] ISpotifyApiResponseHandler responseHandler, IHttpClientFactory clientFactory)
         {
             _localStorage = localStorage;
             _player = player;
@@ -66,10 +66,6 @@ namespace BPMify_Client.Services
             //_responseHandler.AccessTokenExpired +=  async (sender, e) => await StartNewAuthentication(sender, e);//this line is the reason to use the class instead of the interface
         }
 
-        //public async Task StartNewAuthentication(object sender, EventArgs e)
-        //{
-        //    await CheckAuthenticationState();
-        //}
 
         public async Task StartNewAuthentication(object sender, ElapsedEventArgs e)
         {

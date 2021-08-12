@@ -24,13 +24,12 @@ namespace BPMify_Client.Services
 
         private List<Item> _allUserPlaylists;
         private List<Model.PlaylistResponse.Track> _allplaylistTracks;
-        public IHttpClientFactory _clientFactory { get; set; }
-        private SpotifyApiResponseHandler _responseHandler;
+        private IHttpClientFactory _clientFactory;
+        private ISpotifyApiResponseHandler _responseHandler;
+        private PlayerStateManager _stateManager;
 
-        public PlayerStateManager _stateManager { get; set; }
 
-
-        public PlayerService(IHttpClientFactory clientFactory,[FromServices] IJSRuntime js, [FromServices] PlayerStateManager stateManager, [FromServices] SpotifyApiResponseHandler responseHandler)
+        public PlayerService(IHttpClientFactory clientFactory,[FromServices] IJSRuntime js, [FromServices] PlayerStateManager stateManager, [FromServices] ISpotifyApiResponseHandler responseHandler)
         {
             _clientFactory = clientFactory;//Service is defined in Programm.cs in line -> builder.Services.AddHttpClient<PlayerService>("ApiClient",...
             _js = js;
@@ -128,7 +127,6 @@ namespace BPMify_Client.Services
                 Console.WriteLine("Got all playlist items");
                 _lastPlaylistId = playlistId;
                 return _allplaylistTracks;
-
             }
             return _allplaylistTracks;
         }
