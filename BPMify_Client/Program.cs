@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
-using SpotifyAPI.Web;
 using BPMify_Client.Services.IServices;
 using BPMify_Client.Services;
 using BPMify_Client.Helpers;
