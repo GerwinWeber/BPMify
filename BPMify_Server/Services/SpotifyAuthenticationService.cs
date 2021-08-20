@@ -1,7 +1,7 @@
 ﻿using Blazored.LocalStorage;
-using BPMify_Client.Helpers;
-using BPMify_Client.Model;
-using BPMify_Client.Services.IServices;
+using BPMify_Server.Helpers;
+using BPMify_Server.Model;
+using BPMify_Server.Services.IServices;
 using IdentityModel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +16,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 
-namespace BPMify_Client.Services
+namespace BPMify_Server.Services
 {
     public class SpotifyAuthenticationService : ISpotifyAuthenticationService
     {

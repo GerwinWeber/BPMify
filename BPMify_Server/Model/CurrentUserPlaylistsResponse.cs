@@ -1,5 +1,5 @@
 ﻿
-namespace BPMify_Client.Model.CurrentUserPlaylistsResponse
+namespace BPMify_Server.Model.CurrentUserPlaylistsResponse
 {
     public class CurrentUserPlaylistsResponse
     {

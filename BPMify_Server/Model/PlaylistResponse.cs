@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BPMify_Client.Model.PlaylistResponse
+namespace BPMify_Server.Model.PlaylistResponse
 {
 
     public class PlaylistResponse

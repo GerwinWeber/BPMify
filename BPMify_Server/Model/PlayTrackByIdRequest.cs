@@ -1,7 +1,7 @@
 ﻿
 using System.Collections.Generic;
 
-namespace BPMify_Client.Model
+namespace BPMify_Server.Model
 {
     public class PlayTrackByIdRequest
     {

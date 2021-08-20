@@ -1,6 +1,6 @@
 ﻿
 
-namespace BPMify_Client.Helpers
+namespace BPMify_Server.Helpers
 {
     public static class SD
     {

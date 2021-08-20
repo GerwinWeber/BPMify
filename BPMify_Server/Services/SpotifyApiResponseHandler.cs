@@ -1,8 +1,8 @@
-﻿using BPMify_Client.Services.IServices;
+﻿using BPMify_Server.Services.IServices;
 using System;
 using System.Net.Http;
 
-namespace BPMify_Client.Services
+namespace BPMify_Server.Services
 {
     public class SpotifyApiResponseHandler : ISpotifyApiResponseHandler
     {

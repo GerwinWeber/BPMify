@@ -1,17 +1,12 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
 using BPMify_Client.Services.IServices;
 using BPMify_Client.Services;
 using BPMify_Client.Helpers;
-using Microsoft.JSInterop;
 
 namespace BPMify_Client
 {

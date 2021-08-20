@@ -1,4 +1,4 @@
-﻿namespace BPMify_Client.Model
+﻿namespace BPMify_Server.Model
 {
     public class PkceData
     {

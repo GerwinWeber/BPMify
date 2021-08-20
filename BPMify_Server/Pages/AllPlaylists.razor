@@ -1,0 +1,65 @@
+﻿@page "/allPlaylists"
+
+
+@using BPMify_Client.Helpers;
+
+@inject IPlayerService player
+@inject PlayerStateManager stateManager
+@inject NavigationManager NavManager
+
+<h3>Playlists</h3>
+
+@if (_response == null)
+{
+    <div>Loading</div>
+}
+else
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <table class="table table-bordered table-hover">
+                <tbody>
+                    @if (_response.Any())
+                    {
+                        foreach (var item in _response)
+                        {
+                            <tr>
+                                <td>
+                                    <NavLink href="@($"/allPlaylists/{item.id}")">@item.name</NavLink>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5">Keine Playlist vorhanden</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+
+
+
+@code {
+
+    private List<BPMify_Client.Model.CurrentUserPlaylistsResponse.Item> _response;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        if (stateManager.PlayerState == SD.PlayerState_FirstRender)
+        {
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            _response = await player.GetCurrentUsersPlaylists();
+            StateHasChanged();
+        }
+    }
+}

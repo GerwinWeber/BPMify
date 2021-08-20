@@ -1,7 +1,7 @@
-﻿using BPMify_Client.Helpers;
+﻿using BPMify_Server.Helpers;
 using System;
 
-namespace BPMify_Client.Services
+namespace BPMify_Server.Services
 {
     public class PlayerStateManager 
     {
