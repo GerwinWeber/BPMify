@@ -1,7 +1,7 @@
 ﻿@page "/allPlaylists"
 
 
-@using BPMify_Client.Helpers;
+@using BPMify_Server.Helpers;
 
 @inject IPlayerService player
 @inject PlayerStateManager stateManager
@@ -47,7 +47,7 @@ else
 
 @code {
 
-    private List<BPMify_Client.Model.CurrentUserPlaylistsResponse.Item> _response;
+    private List<BPMify_Server.Model.CurrentUserPlaylistsResponse.Item> _response;
 
     protected override async Task OnInitializedAsync()
     {

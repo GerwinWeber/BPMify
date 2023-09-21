@@ -36,7 +36,8 @@ namespace BPMify_Server.Services
         private string _codeChallenge = "";
         private string SpotifyAuthUrl = "";
         //private Uri _redirectUri = new Uri("https://localhost:44352/");
-        private Uri _redirectUri = new Uri("http://afroman711-001-site1.dtempurl.com/");
+        private Uri _redirectUri = new Uri("https://localhost:44381/");
+        //private Uri _redirectUri = new Uri("http://afroman711-001-site1.dtempurl.com/");
 
         private IPlayerService _player;
         private ILocalStorageService _localStorage;
@@ -75,18 +76,26 @@ namespace BPMify_Server.Services
             try
             {
                 _pkceData = await _localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
-                Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
-                if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
+                if (_pkceData == null)
                 {
-                    //RefreshToken found in local storage
-                    _authenticationState = SD.AuthState_RefreshTokenStored;
-                    Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
-                    _stateManager.ValidTokenAvailable = true;
-                    await RequestAccessTokenWithRefreshToken();
-                    return;
+
                 }
+                else
+                {
+                    if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
+                    {
+                        Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+                        //RefreshToken found in local storage
+                        _authenticationState = SD.AuthState_RefreshTokenStored;
+                        Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+                        _stateManager.ValidTokenAvailable = true;
+                        await RequestAccessTokenWithRefreshToken();
+                        return;
+                    }
+                }
+                
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 //Console.WriteLine(e.Message);
                 Console.WriteLine("no RefreshToken found in local storage");
@@ -121,9 +130,10 @@ namespace BPMify_Server.Services
                     await GetLocalStorageData();
                     await RequestAccessTokenWithCode();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     //code not valid
+                    Console.WriteLine(e.ToString());
                     Console.WriteLine("code not valid");
                     _stateManager.TryToAuthenticate = false;
                     _authenticationState = SD.PlayerState_PlayerNotInitialized;

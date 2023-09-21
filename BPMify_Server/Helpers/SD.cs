@@ -28,5 +28,7 @@ namespace BPMify_Server.Helpers
 
         public const string HttpClient_SpotifyApiClient = "ApiClient";
         public const string HttpClient_SpotifyAuthenticationClient = "AuthenticationClient";
+
+        public const string HttpClient_BaseAddress = "afroman711-001-site1.dtempurl.com";
     }
 }

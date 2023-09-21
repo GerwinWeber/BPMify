@@ -35,8 +35,8 @@ namespace BPMify_Client.Services
         private string _codeVerifier = "";
         private string _codeChallenge = "";
         private string SpotifyAuthUrl = "";
-        //private Uri _redirectUri = new Uri("https://localhost:44352/");
-        private Uri _redirectUri = new Uri("http://afroman711-001-site1.dtempurl.com/");
+        private Uri _redirectUri = new Uri("https://localhost:44352/");
+        //private Uri _redirectUri = new Uri("http://afroman711-001-site1.dtempurl.com/");
 
         private IPlayerService _player;
         private ILocalStorageService _localStorage;
@@ -75,7 +75,7 @@ namespace BPMify_Client.Services
             try
             {
                 _pkceData = await _localStorage.GetItemAsync<PkceData>(SD.Local_PkceData);
-                Console.WriteLine("Refreshtoken: " + _pkceData.RefreshToken);
+                Console.WriteLine("Test Refreshtoken: " + _pkceData.RefreshToken);
                 if (!string.IsNullOrEmpty(_pkceData.RefreshToken))
                 {
                     //RefreshToken found in local storage

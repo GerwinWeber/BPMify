@@ -1,7 +1,114 @@
 ﻿@page "/"
 
+@using Helpers
+@using BPMify_Server.Services.IServices
+
+
+
+@inject ILocalStorageService localStorage
+@inject IPlayerService player
+@inject ISpotifyAuthenticationService authService
+@inject IJSRuntime js
+@inject PlayerStateManager stateManager
+
 <h1>Hello, world!</h1>
 
-Welcome to your new app.
+@if (stateManager.PlayerState == SD.PlayerState_AuthenticatioFailed)
+{
+    <a class="btn btn-primary" @onclick="authService.NavigateToSpotifyLogin">
+        Login
+    </a>
+}
+else if (stateManager.PlayerState == SD.PlayerState_PlayerReady)
+{
+    <div class="btn btn-primary" @onclick="() => player.Resume()">Resume Playing</div>
+    <div class="btn btn-primary" @onclick="() => player.Pause()">Pause Playing</div>
+}
+else
+{
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+    <div>Loading... </div>
+}
+
+<div class="btn btn-primary" @onclick="() => GetCurrentPlayerState()">GetCurrentPlayerState</div>
+<div>TryToAuthenticate: @stateManager.TryToAuthenticate</div>
+<div>Valid Token available: @stateManager.ValidTokenAvailable</div>
+<div>Local Player is ready: @stateManager.LocalPlayerIsReady</div>
+@*<div>Local Player is active: @stateManager.LocalPlayerIsAcitve</div>*@
+<div>Playerstate: @stateManager.PlayerState</div>
+
+@*<span class="mb-4"></span>
+    <div class="btn btn-primary" @onclick="authService.CheckForRecievedCode">Check for code</div>
+    <div class="btn btn-primary" @onclick="()=> authService.GetLocalStorageData()">Get local storage</div>
+    <div class="btn btn-primary" @onclick="()=> authService.RequestAccessTokenWithCode()">Request Access Token</div>*@
+
+
+
+@code{
+    public string _authState = "";
+    private static DotNetObjectReference<Index> _objRef;
+    private string _playerState { get; set; }
+    //private PlayerStateManager _stateManager = new PlayerStateManager();
+
+    //public event EventHandler PlayerStateHasChanged;//Call a method in component which call StateHasChangedMethod
+
+    protected override async Task OnInitializedAsync()
+    {
+        ////_stateManager.PlayerStateHasChanged += UpdateDom;
+        ////_playerState = _stateManager.GetPlayerState();
+
+        //stateManager.PlayerStateHasChanged += UpdateDom;
+
+
+        //if (stateManager.PlayerState == SD.PlayerState_FirstRender)
+        //{
+        //    stateManager.TryToAuthenticate = true;
+        //    _objRef = DotNetObjectReference.Create(this);
+        //    var result = await js.InvokeAsync<string>("SetIndexComponentRef", _objRef);
+
+        //    await authService.CheckAuthenticationState();
+        //    //_authState = authService.GetAuthState();
+        //    Console.WriteLine(_authState);
+        //}
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        stateManager.PlayerStateHasChanged += UpdateDom;
+
+
+        if (stateManager.PlayerState == SD.PlayerState_FirstRender)
+        {
+            stateManager.TryToAuthenticate = true;
+            _objRef = DotNetObjectReference.Create(this);
+            var result = await js.InvokeAsync<string>("SetIndexComponentRef", _objRef);
+
+            await authService.CheckAuthenticationState();
+            //_authState = authService.GetAuthState();
+            //Console.WriteLine(_authState);
+        }
+    }
+
+    public async Task GetCurrentPlayerState()
+    {
+        await js.InvokeVoidAsync("GetCurrentState");
+    }
+
+    [JSInvokable]
+    public async Task TransferPlayback(string deviceId)
+    {
+        Console.WriteLine("Rerendered");
+        await player.TransferPlayback(deviceId);
+    }
+
+    public void UpdateDom(object sender, NewStateEventArgs e)
+    {
+        if (e.NewState != "")
+        {
+            _playerState = e.NewState;
+        }
+        Console.WriteLine("UpdateDom");
+        StateHasChanged();
+    }
+
+}

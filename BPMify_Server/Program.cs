@@ -1,10 +1,17 @@
+using Blazored.LocalStorage;
+using BPMify_Server.Helpers;
+using BPMify_Server.Services;
+using BPMify_Server.Services.IServices;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace BPMify_Server
@@ -22,5 +29,6 @@ namespace BPMify_Server
                 {
                     webBuilder.UseStartup<Startup>();
                 });
+
     }
 }
