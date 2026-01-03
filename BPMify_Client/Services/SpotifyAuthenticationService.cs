@@ -28,14 +28,16 @@ namespace BPMify_Client.Services
 
         private Uri _currentUri;
         private NavigationManager _navManager;
-        
-        private const string _clientId = "c5d79ae00f804be181a0551bda35a318";
+
+        private const string _clientId = "12b474707a0d41d08a6cd91bd49e56a6";
         private string _spotifyScopes = @"user-read-currently-playing%20user-read-playback-state%20user-modify-playback-state%20streaming%20user-read-email%20user-read-private%20playlist-read-private";
         private string _code = "";
         private string _codeVerifier = "";
         private string _codeChallenge = "";
         private string SpotifyAuthUrl = "";
-        private Uri _redirectUri = new Uri("https://localhost:44352/");
+        private Uri _redirectUri = new Uri("http://127.0.0.1:35458/callback");
+        //https://developer.spotify.com/documentation/web-api/concepts/redirect_uri
+        //https://developer.spotify.com/documentation/web-api/tutorials/migration-insecure-redirect-uri
         //private Uri _redirectUri = new Uri("http://afroman711-001-site1.dtempurl.com/");
 
         private IPlayerService _player;
@@ -48,8 +50,8 @@ namespace BPMify_Client.Services
         private static Timer _refreshTokenTimer;
 
 
-        public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage,[FromServices] IPlayerService player,[FromServices] IJSRuntime js, NavigationManager navManager,
-            [FromServices] PlayerStateManager stateManager,[FromServices] ISpotifyApiResponseHandler responseHandler, IHttpClientFactory clientFactory)
+        public SpotifyAuthenticationService([FromServices] ILocalStorageService localStorage, [FromServices] IPlayerService player, [FromServices] IJSRuntime js, NavigationManager navManager,
+            [FromServices] PlayerStateManager stateManager, [FromServices] ISpotifyApiResponseHandler responseHandler, IHttpClientFactory clientFactory)
         {
             _localStorage = localStorage;
             _player = player;
@@ -250,7 +252,7 @@ namespace BPMify_Client.Services
             {
                 Console.WriteLine("No PKCE-Data in local storage available");
             }
-            
+
         }
 
         #region RequestNewAccessTokenBeforeItExpires
